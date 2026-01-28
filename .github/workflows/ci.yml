@@ -90,8 +90,8 @@ jobs:
       
       - name: Build package
         run: |
-          uv pip install build
-          python -m build
+          uv pip install --python-preference only-managed build
+          uv run python -m build
       
       - name: Check package
         run: uv run twine check dist/*
