@@ -55,10 +55,10 @@ jobs:
         run: uv sync
       
       - name: Run ruff
-        run: uv run ruff check clawdbot/
+        run: uv run ruff check .
       
       - name: Check black formatting
-        run: uv run black --check clawdbot/ tests/
+        run: uv run black --check .
       
       - name: Run mypy
         run: uv run mypy clawdbot/ --ignore-missing-imports
@@ -76,6 +76,9 @@ jobs:
       
       - name: Set up Python
         run: uv python install 3.11
+      
+      - name: Install dependencies
+        run: uv sync
       
       - name: Build package
         run: uv build

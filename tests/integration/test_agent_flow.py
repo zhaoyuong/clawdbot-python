@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from clawdbot.agents import AgentRuntime, Session, SessionManager
+from clawdbot.agents.runtime import AgentEvent
 from clawdbot.agents.tools.bash import BashTool
 
 
@@ -26,8 +27,8 @@ class TestAgentFlow:
         with patch.object(runtime, "_run_anthropic") as mock_anthropic:
 
             async def mock_response(*args):
-                yield {"type": "assistant", "delta": {"text": "Hello! "}}
-                yield {"type": "assistant", "delta": {"text": "I am ClawdBot."}}
+                yield AgentEvent("assistant", {"delta": {"text": "Hello! "}})
+                yield AgentEvent("assistant", {"delta": {"text": "I am ClawdBot."}})
 
             mock_anthropic.return_value = mock_response()
 
@@ -51,7 +52,7 @@ class TestAgentFlow:
         with patch.object(runtime, "_run_anthropic") as mock:
             # Turn 1
             async def response1(*args):
-                yield {"type": "assistant", "delta": {"text": "Response 1"}}
+                yield AgentEvent("assistant", {"delta": {"text": "Response 1"}})
 
             mock.return_value = response1()
 
@@ -60,7 +61,7 @@ class TestAgentFlow:
 
             # Turn 2
             async def response2(*args):
-                yield {"type": "assistant", "delta": {"text": "Response 2"}}
+                yield AgentEvent("assistant", {"delta": {"text": "Response 2"}})
 
             mock.return_value = response2()
 
