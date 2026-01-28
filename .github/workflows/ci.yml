@@ -21,12 +21,14 @@ jobs:
         uses: astral-sh/setup-uv@v1
         with:
           enable-cache: false
+          version: "latest"
       
       - name: Set up Python
         run: uv python install ${{ matrix.python-version }}
       
       - name: Install dependencies
-        run: uv sync --no-cache
+        run: |
+          uv sync --no-cache || (echo "uv sync failed, trying with verbose output:" && uv sync --no-cache -v)
       
       - name: Run tests with coverage
         run: uv run pytest --cov=clawdbot --cov-report=xml --cov-report=term
@@ -49,12 +51,13 @@ jobs:
         uses: astral-sh/setup-uv@v1
         with:
           enable-cache: false
+          version: "latest"
       
       - name: Set up Python
         run: uv python install 3.11
       
       - name: Install dependencies
-        run: uv sync --no-cache
+        run: uv sync --no-cache || (echo "uv sync failed, trying with verbose output:" && uv sync --no-cache -v)
       
       - name: Run ruff
         run: uv run ruff check .
@@ -77,15 +80,18 @@ jobs:
         uses: astral-sh/setup-uv@v1
         with:
           enable-cache: false
+          version: "latest"
       
       - name: Set up Python
         run: uv python install 3.11
       
       - name: Install dependencies
-        run: uv sync --no-cache
+        run: uv sync --no-cache || (echo "uv sync failed, trying with verbose output:" && uv sync --no-cache -v)
       
       - name: Build package
-        run: uv build
+        run: |
+          uv pip install build
+          python -m build
       
       - name: Check package
         run: uv run twine check dist/*
