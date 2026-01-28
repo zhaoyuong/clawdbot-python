@@ -2,8 +2,7 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Optional
-import asyncio
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +10,7 @@ logger = logging.getLogger(__name__)
 class MemorySearchTool:
     """Memory search tool using LanceDB"""
 
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Path | None = None):
         self.name = "memory_search"
         self.description = "Search through conversation memory using semantic search"
 
@@ -35,22 +34,25 @@ class MemorySearchTool:
 
             # Connect to LanceDB
             self._db = lancedb.connect(str(self.db_path))
-            
+
             # Load embedding model
-            self._encoder = SentenceTransformer('all-MiniLM-L6-v2')
-            
+            self._encoder = SentenceTransformer("all-MiniLM-L6-v2")
+
             # Check if table exists
             table_name = "memory"
             if table_name not in self._db.table_names():
                 # Create empty table with schema
                 import pyarrow as pa
-                schema = pa.schema([
-                    pa.field("text", pa.string()),
-                    pa.field("vector", pa.list_(pa.float32(), 384)),
-                    pa.field("timestamp", pa.string()),
-                    pa.field("session_id", pa.string()),
-                    pa.field("metadata", pa.string())
-                ])
+
+                schema = pa.schema(
+                    [
+                        pa.field("text", pa.string()),
+                        pa.field("vector", pa.list_(pa.float32(), 384)),
+                        pa.field("timestamp", pa.string()),
+                        pa.field("session_id", pa.string()),
+                        pa.field("metadata", pa.string()),
+                    ]
+                )
                 self._table = self._db.create_table(table_name, schema=schema, mode="create")
             else:
                 self._table = self._db.open_table(table_name)
@@ -66,21 +68,15 @@ class MemorySearchTool:
         return {
             "type": "object",
             "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "Search query"
-                },
+                "query": {"type": "string", "description": "Search query"},
                 "limit": {
                     "type": "integer",
                     "description": "Maximum number of results",
-                    "default": 5
+                    "default": 5,
                 },
-                "session_id": {
-                    "type": "string",
-                    "description": "Filter by session ID (optional)"
-                }
+                "session_id": {"type": "string", "description": "Filter by session ID (optional)"},
             },
-            "required": ["query"]
+            "required": ["query"],
         }
 
     async def execute(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -90,11 +86,7 @@ class MemorySearchTool:
         session_filter = params.get("session_id")
 
         if not query:
-            return {
-                "success": False,
-                "content": "",
-                "error": "No query provided"
-            }
+            return {"success": False, "content": "", "error": "No query provided"}
 
         try:
             # Initialize DB if needed
@@ -105,7 +97,7 @@ class MemorySearchTool:
                 return {
                     "success": True,
                     "content": "Memory is empty. No entries to search.",
-                    "metadata": {"count": 0}
+                    "metadata": {"count": 0},
                 }
 
             # Generate query embedding
@@ -113,18 +105,18 @@ class MemorySearchTool:
 
             # Search
             results = self._table.search(query_embedding).limit(limit)
-            
+
             # Apply session filter if provided
             if session_filter:
                 results = results.where(f"session_id = '{session_filter}'")
-            
+
             results_list = results.to_list()
 
             if not results_list:
                 return {
                     "success": True,
                     "content": "No matching memories found.",
-                    "metadata": {"count": 0}
+                    "metadata": {"count": 0},
                 }
 
             # Format results
@@ -141,32 +133,21 @@ class MemorySearchTool:
             return {
                 "success": True,
                 "content": content,
-                "metadata": {
-                    "count": len(results_list),
-                    "query": query
-                }
+                "metadata": {"count": len(results_list), "query": query},
             }
 
         except ImportError:
             return {
                 "success": False,
                 "content": "",
-                "error": "LanceDB not installed. Install with: pip install lancedb sentence-transformers pyarrow"
+                "error": "LanceDB not installed. Install with: pip install lancedb sentence-transformers pyarrow",
             }
         except Exception as e:
             logger.error(f"Memory search error: {e}", exc_info=True)
-            return {
-                "success": False,
-                "content": "",
-                "error": str(e)
-            }
+            return {"success": False, "content": "", "error": str(e)}
 
     async def add_memory(
-        self,
-        text: str,
-        session_id: str,
-        timestamp: str,
-        metadata: Optional[dict] = None
+        self, text: str, session_id: str, timestamp: str, metadata: dict | None = None
     ) -> bool:
         """Add entry to memory"""
         try:
@@ -177,13 +158,18 @@ class MemorySearchTool:
 
             # Add to database
             import json
-            self._table.add([{
-                "text": text,
-                "vector": vector,
-                "timestamp": timestamp,
-                "session_id": session_id,
-                "metadata": json.dumps(metadata or {})
-            }])
+
+            self._table.add(
+                [
+                    {
+                        "text": text,
+                        "vector": vector,
+                        "timestamp": timestamp,
+                        "session_id": session_id,
+                        "metadata": json.dumps(metadata or {}),
+                    }
+                ]
+            )
 
             return True
 

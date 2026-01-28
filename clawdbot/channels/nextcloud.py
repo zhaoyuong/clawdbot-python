@@ -1,10 +1,10 @@
 """Nextcloud Talk channel implementation"""
 
 import logging
-from typing import Any, Optional
 from datetime import datetime
+from typing import Any
 
-from .base import ChannelPlugin, ChannelCapabilities, InboundMessage
+from .base import ChannelCapabilities, ChannelPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class NextcloudChannel(ChannelPlugin):
             supports_media=True,
             supports_reactions=False,
             supports_threads=False,
-            supports_polls=False
+            supports_polls=False,
         )
         self._base_url = None
         self._username = None
@@ -39,7 +39,7 @@ class NextcloudChannel(ChannelPlugin):
         logger.info("Starting Nextcloud Talk channel...")
         logger.warning("Nextcloud Talk requires API integration")
         logger.info(f"Nextcloud server: {self._base_url}")
-        
+
         self._running = True
         logger.info("Nextcloud Talk channel started (framework ready)")
 
@@ -48,7 +48,7 @@ class NextcloudChannel(ChannelPlugin):
         logger.info("Stopping Nextcloud Talk channel...")
         self._running = False
 
-    async def send_text(self, target: str, text: str, reply_to: Optional[str] = None) -> str:
+    async def send_text(self, target: str, text: str, reply_to: str | None = None) -> str:
         """Send text message"""
         if not self._running:
             raise RuntimeError("Nextcloud Talk channel not started")
@@ -57,11 +57,7 @@ class NextcloudChannel(ChannelPlugin):
         return f"nc-msg-{datetime.utcnow().timestamp()}"
 
     async def send_media(
-        self,
-        target: str,
-        media_url: str,
-        media_type: str,
-        caption: Optional[str] = None
+        self, target: str, media_url: str, media_type: str, caption: str | None = None
     ) -> str:
         """Send media message"""
         if not self._running:

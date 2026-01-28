@@ -1,13 +1,13 @@
 """
 Enhanced Discord channel with connection management
 """
-import logging
-from typing import Any, Optional
-from datetime import datetime
-import asyncio
 
-from .base import ChannelPlugin, ChannelCapabilities, InboundMessage
-from .connection import ReconnectConfig, ConnectionState
+import asyncio
+import logging
+from typing import Any
+
+from .base import ChannelCapabilities, ChannelPlugin, InboundMessage
+from .connection import ReconnectConfig
 
 logger = logging.getLogger(__name__)
 
@@ -30,12 +30,12 @@ class EnhancedDiscordChannel(ChannelPlugin):
             supports_media=True,
             supports_reactions=True,
             supports_threads=True,
-            supports_polls=False
+            supports_polls=False,
         )
-        self._client: Optional[Any] = None
-        self._bot_token: Optional[str] = None
-        self._ready_event: Optional[asyncio.Event] = None
-        
+        self._client: Any | None = None
+        self._bot_token: str | None = None
+        self._ready_event: asyncio.Event | None = None
+
         # Setup connection manager
         self._setup_connection_manager(
             reconnect_config=ReconnectConfig(
@@ -43,7 +43,7 @@ class EnhancedDiscordChannel(ChannelPlugin):
                 max_attempts=10,
                 base_delay=2.0,
                 max_delay=300.0,
-                exponential_backoff=True
+                exponential_backoff=True,
             )
         )
 
@@ -56,7 +56,7 @@ class EnhancedDiscordChannel(ChannelPlugin):
             raise ValueError("Discord bot token not provided")
 
         logger.info(f"[{self.id}] Starting Discord channel...")
-        
+
         if self._connection_manager:
             success = await self._connection_manager.connect()
             if success:
@@ -64,31 +64,29 @@ class EnhancedDiscordChannel(ChannelPlugin):
                 if self._ready_event:
                     try:
                         await asyncio.wait_for(self._ready_event.wait(), timeout=30.0)
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         logger.warning(f"[{self.id}] Timeout waiting for Discord ready")
-                
+
                 # Setup health checker
                 self._setup_health_checker(interval=60.0, timeout=15.0)
                 if self._health_checker:
                     self._health_checker.start()
         else:
             await self._do_connect()
-    
+
     async def _do_connect(self) -> None:
         """Internal connection implementation"""
         try:
             import discord
             from discord.ext import commands
         except ImportError:
-            raise ImportError(
-                "discord.py not installed. Install with: pip install discord.py"
-            )
-        
+            raise ImportError("discord.py not installed. Install with: pip install discord.py")
+
         if self._client:
             await self._do_disconnect()
-        
+
         self._ready_event = asyncio.Event()
-        
+
         # Setup intents
         intents = discord.Intents.default()
         intents.message_content = True
@@ -96,12 +94,8 @@ class EnhancedDiscordChannel(ChannelPlugin):
         intents.guilds = True
 
         # Create bot
-        self._client = commands.Bot(
-            command_prefix="!",
-            intents=intents,
-            help_command=None
-        )
-        
+        self._client = commands.Bot(command_prefix="!", intents=intents, help_command=None)
+
         # Register event handlers
         @self._client.event
         async def on_ready():
@@ -109,19 +103,17 @@ class EnhancedDiscordChannel(ChannelPlugin):
             self._running = True
             if self._ready_event:
                 self._ready_event.set()
-        
+
         @self._client.event
         async def on_disconnect():
             logger.warning(f"[{self.id}] Discord disconnected")
             if self._connection_manager:
-                self._connection_manager.handle_connection_error(
-                    Exception("Discord disconnected")
-                )
-        
+                self._connection_manager.handle_connection_error(Exception("Discord disconnected"))
+
         @self._client.event
         async def on_resumed():
             logger.info(f"[{self.id}] Discord connection resumed")
-        
+
         @self._client.event
         async def on_error(event, *args, **kwargs):
             logger.error(f"[{self.id}] Discord error in {event}")
@@ -138,7 +130,7 @@ class EnhancedDiscordChannel(ChannelPlugin):
 
         # Start bot in background
         asyncio.create_task(self._run_client())
-    
+
     async def _run_client(self) -> None:
         """Run Discord client with error handling"""
         try:
@@ -147,7 +139,7 @@ class EnhancedDiscordChannel(ChannelPlugin):
             logger.error(f"[{self.id}] Discord client error: {e}")
             if self._connection_manager:
                 self._connection_manager.handle_connection_error(e)
-    
+
     async def _do_disconnect(self) -> None:
         """Internal disconnection implementation"""
         if self._client:
@@ -157,15 +149,15 @@ class EnhancedDiscordChannel(ChannelPlugin):
                 logger.warning(f"[{self.id}] Error closing Discord client: {e}")
             finally:
                 self._client = None
-        
+
         self._running = False
         self._ready_event = None
-    
+
     async def _health_check(self) -> bool:
         """Check if Discord connection is healthy"""
         if not self._client or not self._running:
             return False
-        
+
         try:
             # Check if client is connected and ready
             return self._client.is_ready() and not self._client.is_closed()
@@ -176,25 +168,25 @@ class EnhancedDiscordChannel(ChannelPlugin):
     async def stop(self) -> None:
         """Stop Discord bot"""
         logger.info(f"[{self.id}] Stopping Discord channel...")
-        
+
         if self._health_checker:
             self._health_checker.stop()
-        
+
         if self._connection_manager:
             await self._connection_manager.disconnect()
         else:
             await self._do_disconnect()
-        
+
         logger.info(f"[{self.id}] Discord channel stopped")
 
-    async def send_text(self, target: str, text: str, reply_to: Optional[str] = None) -> str:
+    async def send_text(self, target: str, text: str, reply_to: str | None = None) -> str:
         """Send text message with retry"""
         if not self._client:
             raise RuntimeError("Discord channel not started")
 
         max_retries = 3
         last_error = None
-        
+
         for attempt in range(max_retries):
             try:
                 channel_id = int(target)
@@ -225,34 +217,29 @@ class EnhancedDiscordChannel(ChannelPlugin):
                 logger.warning(
                     f"[{self.id}] Send failed (attempt {attempt + 1}/{max_retries}): {e}"
                 )
-                
+
                 if self._connection_manager:
                     self._connection_manager.metrics.record_error(str(e))
-                
+
                 # Don't retry for certain errors
                 error_str = str(e).lower()
                 if any(x in error_str for x in ["forbidden", "not found", "invalid"]):
                     break
-                
+
                 if attempt < max_retries - 1:
                     await asyncio.sleep(1.0 * (attempt + 1))
-        
+
         raise last_error
 
     async def send_media(
-        self,
-        target: str,
-        media_url: str,
-        media_type: str,
-        caption: Optional[str] = None
+        self, target: str, media_url: str, media_type: str, caption: str | None = None
     ) -> str:
         """Send media message"""
         if not self._client:
             raise RuntimeError("Discord channel not started")
 
         try:
-            import discord
-            
+
             channel_id = int(target)
             channel = self._client.get_channel(channel_id)
 
@@ -265,7 +252,7 @@ class EnhancedDiscordChannel(ChannelPlugin):
             # For URLs, just send as message with caption
             content = f"{caption}\n{media_url}" if caption else media_url
             message = await channel.send(content=content)
-            
+
             await self._track_send()
             return str(message.id)
 
@@ -279,7 +266,7 @@ class EnhancedDiscordChannel(ChannelPlugin):
         """Handle incoming Discord message"""
         try:
             import discord
-            
+
             # Determine chat type
             if isinstance(message.channel, discord.DMChannel):
                 chat_type = "direct"
@@ -302,14 +289,14 @@ class EnhancedDiscordChannel(ChannelPlugin):
                 metadata={
                     "guild_id": str(message.guild.id) if message.guild else None,
                     "guild_name": message.guild.name if message.guild else None,
-                    "channel_name": getattr(message.channel, 'name', None),
+                    "channel_name": getattr(message.channel, "name", None),
                     "is_bot": message.author.bot,
-                    "attachments": len(message.attachments)
-                }
+                    "attachments": len(message.attachments),
+                },
             )
 
             await self._handle_message(inbound)
-            
+
         except Exception as e:
             logger.error(f"[{self.id}] Error handling message: {e}")
             if self._connection_manager:

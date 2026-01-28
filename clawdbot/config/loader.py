@@ -1,9 +1,8 @@
 """Configuration loading and persistence"""
 
-import os
 import json
 from pathlib import Path
-from typing import Optional
+
 import pyjson5
 
 from .schema import ClawdbotConfig
@@ -16,7 +15,7 @@ def get_config_path() -> Path:
     return config_dir / "clawdbot.json"
 
 
-def load_config(config_path: Optional[Path] = None) -> ClawdbotConfig:
+def load_config(config_path: Path | None = None) -> ClawdbotConfig:
     """Load configuration from file or return defaults"""
     if config_path is None:
         config_path = get_config_path()
@@ -26,7 +25,7 @@ def load_config(config_path: Optional[Path] = None) -> ClawdbotConfig:
         return ClawdbotConfig()
 
     try:
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(config_path, encoding="utf-8") as f:
             # Support JSON5 for comments
             config_data = pyjson5.load(f)
         return ClawdbotConfig(**config_data)
@@ -36,7 +35,7 @@ def load_config(config_path: Optional[Path] = None) -> ClawdbotConfig:
         return ClawdbotConfig()
 
 
-def save_config(config: ClawdbotConfig, config_path: Optional[Path] = None) -> None:
+def save_config(config: ClawdbotConfig, config_path: Path | None = None) -> None:
     """Save configuration to file"""
     if config_path is None:
         config_path = get_config_path()

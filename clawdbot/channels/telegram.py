@@ -1,13 +1,13 @@
 """Telegram channel implementation"""
 
 import logging
-from typing import Any, Optional
 from datetime import datetime
+from typing import Any
 
 from telegram import Update
-from telegram.ext import Application, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
-from .base import ChannelPlugin, ChannelCapabilities, InboundMessage
+from .base import ChannelCapabilities, ChannelPlugin, InboundMessage
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +24,10 @@ class TelegramChannel(ChannelPlugin):
             supports_media=True,
             supports_reactions=True,
             supports_threads=False,
-            supports_polls=True
+            supports_polls=True,
         )
-        self._app: Optional[Application] = None
-        self._bot_token: Optional[str] = None
+        self._app: Application | None = None
+        self._bot_token: str | None = None
 
     async def start(self, config: dict[str, Any]) -> None:
         """Start Telegram bot"""
@@ -43,10 +43,7 @@ class TelegramChannel(ChannelPlugin):
 
         # Add message handler
         self._app.add_handler(
-            MessageHandler(
-                filters.TEXT & ~filters.COMMAND,
-                self._handle_telegram_message
-            )
+            MessageHandler(filters.TEXT & ~filters.COMMAND, self._handle_telegram_message)
         )
 
         # Start bot
@@ -67,20 +64,18 @@ class TelegramChannel(ChannelPlugin):
             self._running = False
             logger.info("Telegram channel stopped")
 
-    async def send_text(self, target: str, text: str, reply_to: Optional[str] = None) -> str:
+    async def send_text(self, target: str, text: str, reply_to: str | None = None) -> str:
         """Send text message"""
         if not self._app:
             raise RuntimeError("Telegram channel not started")
 
         try:
             # Parse target (chat_id)
-            chat_id = int(target) if target.lstrip('-').isdigit() else target
+            chat_id = int(target) if target.lstrip("-").isdigit() else target
 
             # Send message
             message = await self._app.bot.send_message(
-                chat_id=chat_id,
-                text=text,
-                reply_to_message_id=int(reply_to) if reply_to else None
+                chat_id=chat_id, text=text, reply_to_message_id=int(reply_to) if reply_to else None
             )
 
             return str(message.message_id)
@@ -90,36 +85,26 @@ class TelegramChannel(ChannelPlugin):
             raise
 
     async def send_media(
-        self,
-        target: str,
-        media_url: str,
-        media_type: str,
-        caption: Optional[str] = None
+        self, target: str, media_url: str, media_type: str, caption: str | None = None
     ) -> str:
         """Send media message"""
         if not self._app:
             raise RuntimeError("Telegram channel not started")
 
         try:
-            chat_id = int(target) if target.lstrip('-').isdigit() else target
+            chat_id = int(target) if target.lstrip("-").isdigit() else target
 
             if media_type == "photo":
                 message = await self._app.bot.send_photo(
-                    chat_id=chat_id,
-                    photo=media_url,
-                    caption=caption
+                    chat_id=chat_id, photo=media_url, caption=caption
                 )
             elif media_type == "video":
                 message = await self._app.bot.send_video(
-                    chat_id=chat_id,
-                    video=media_url,
-                    caption=caption
+                    chat_id=chat_id, video=media_url, caption=caption
                 )
             elif media_type == "document":
                 message = await self._app.bot.send_document(
-                    chat_id=chat_id,
-                    document=media_url,
-                    caption=caption
+                    chat_id=chat_id, document=media_url, caption=caption
                 )
             else:
                 raise ValueError(f"Unsupported media type: {media_type}")
@@ -130,7 +115,9 @@ class TelegramChannel(ChannelPlugin):
             logger.error(f"Failed to send Telegram media: {e}", exc_info=True)
             raise
 
-    async def _handle_telegram_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def _handle_telegram_message(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
         """Handle incoming Telegram message"""
         if not update.message or not update.message.text:
             return
@@ -160,8 +147,8 @@ class TelegramChannel(ChannelPlugin):
             metadata={
                 "username": sender.username,
                 "chat_title": chat.title,
-                "chat_username": chat.username
-            }
+                "chat_username": chat.username,
+            },
         )
 
         # Pass to handler

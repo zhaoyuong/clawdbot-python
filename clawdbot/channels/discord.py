@@ -1,11 +1,10 @@
 """Discord channel implementation"""
 
-import logging
-from typing import Any, Optional
-from datetime import datetime
 import asyncio
+import logging
+from typing import Any
 
-from .base import ChannelPlugin, ChannelCapabilities, InboundMessage
+from .base import ChannelCapabilities, ChannelPlugin, InboundMessage
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +21,10 @@ class DiscordChannel(ChannelPlugin):
             supports_media=True,
             supports_reactions=True,
             supports_threads=True,
-            supports_polls=False
+            supports_polls=False,
         )
-        self._client: Optional[Any] = None
-        self._bot_token: Optional[str] = None
+        self._client: Any | None = None
+        self._bot_token: str | None = None
 
     async def start(self, config: dict[str, Any]) -> None:
         """Start Discord bot"""
@@ -76,7 +75,7 @@ class DiscordChannel(ChannelPlugin):
             await self._client.close()
             self._running = False
 
-    async def send_text(self, target: str, text: str, reply_to: Optional[str] = None) -> str:
+    async def send_text(self, target: str, text: str, reply_to: str | None = None) -> str:
         """Send text message"""
         if not self._client:
             raise RuntimeError("Discord channel not started")
@@ -98,11 +97,7 @@ class DiscordChannel(ChannelPlugin):
             raise
 
     async def send_media(
-        self,
-        target: str,
-        media_url: str,
-        media_type: str,
-        caption: Optional[str] = None
+        self, target: str, media_url: str, media_type: str, caption: str | None = None
     ) -> str:
         """Send media message"""
         if not self._client:
@@ -143,8 +138,8 @@ class DiscordChannel(ChannelPlugin):
             reply_to=str(message.reference.message_id) if message.reference else None,
             metadata={
                 "guild_id": str(message.guild.id) if message.guild else None,
-                "channel_name": message.channel.name if hasattr(message.channel, 'name') else None
-            }
+                "channel_name": message.channel.name if hasattr(message.channel, "name") else None,
+            },
         )
 
         await self._handle_message(inbound)

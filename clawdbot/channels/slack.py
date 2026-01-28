@@ -1,10 +1,10 @@
 """Slack channel implementation"""
 
 import logging
-from typing import Any, Optional
 from datetime import datetime
+from typing import Any
 
-from .base import ChannelPlugin, ChannelCapabilities, InboundMessage
+from .base import ChannelCapabilities, ChannelPlugin, InboundMessage
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +21,10 @@ class SlackChannel(ChannelPlugin):
             supports_media=True,
             supports_reactions=True,
             supports_threads=True,
-            supports_polls=False
+            supports_polls=False,
         )
-        self._app: Optional[Any] = None
-        self._bot_token: Optional[str] = None
+        self._app: Any | None = None
+        self._bot_token: str | None = None
 
     async def start(self, config: dict[str, Any]) -> None:
         """Start Slack bot"""
@@ -37,8 +37,8 @@ class SlackChannel(ChannelPlugin):
         logger.info("Starting Slack channel...")
 
         try:
-            from slack_bolt.async_app import AsyncApp
             from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
+            from slack_bolt.async_app import AsyncApp
 
             self._app = AsyncApp(token=self._bot_token, signing_secret=signing_secret)
 
@@ -64,16 +64,14 @@ class SlackChannel(ChannelPlugin):
         logger.info("Stopping Slack channel...")
         self._running = False
 
-    async def send_text(self, target: str, text: str, reply_to: Optional[str] = None) -> str:
+    async def send_text(self, target: str, text: str, reply_to: str | None = None) -> str:
         """Send text message"""
         if not self._app:
             raise RuntimeError("Slack channel not started")
 
         try:
             result = await self._app.client.chat_postMessage(
-                channel=target,
-                text=text,
-                thread_ts=reply_to
+                channel=target, text=text, thread_ts=reply_to
             )
             return result["ts"]
 
@@ -98,10 +96,7 @@ class SlackChannel(ChannelPlugin):
             text=message.get("text", ""),
             timestamp=datetime.fromtimestamp(float(message.get("ts", 0))).isoformat(),
             reply_to=message.get("thread_ts"),
-            metadata={
-                "channel_type": message.get("channel_type"),
-                "team": message.get("team")
-            }
+            metadata={"channel_type": message.get("channel_type"), "team": message.get("team")},
         )
 
         await self._handle_message(inbound)

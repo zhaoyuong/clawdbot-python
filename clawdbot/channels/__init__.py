@@ -1,36 +1,32 @@
 """
 Channel plugins for ClawdBot
 """
+
 from .base import (
-    ChannelPlugin,
     ChannelCapabilities,
+    ChannelPlugin,
     InboundMessage,
+    MessageHandler,
     OutboundMessage,
-    MessageHandler
-)
-from .registry import (
-    ChannelRegistry,
-    get_channel_registry,
-    register_channel,
-    get_channel
 )
 from .connection import (
     ConnectionManager,
-    ConnectionState,
     ConnectionMetrics,
+    ConnectionState,
+    HealthChecker,
     ReconnectConfig,
-    HealthChecker
 )
-
-# Import channel implementations
-from .telegram import TelegramChannel
 from .discord import DiscordChannel
-from .slack import SlackChannel
-from .webchat import WebChatChannel
+from .enhanced_discord import EnhancedDiscordChannel
 
 # Enhanced versions
 from .enhanced_telegram import EnhancedTelegramChannel
-from .enhanced_discord import EnhancedDiscordChannel
+from .registry import ChannelRegistry, get_channel, get_channel_registry, register_channel
+from .slack import SlackChannel
+
+# Import channel implementations
+from .telegram import TelegramChannel
+from .webchat import WebChatChannel
 
 __all__ = [
     # Base classes

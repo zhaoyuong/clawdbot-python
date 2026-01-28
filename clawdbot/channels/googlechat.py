@@ -1,10 +1,10 @@
 """Google Chat channel implementation"""
 
 import logging
-from typing import Any, Optional
 from datetime import datetime
+from typing import Any
 
-from .base import ChannelPlugin, ChannelCapabilities, InboundMessage
+from .base import ChannelCapabilities, ChannelPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class GoogleChatChannel(ChannelPlugin):
             supports_media=True,
             supports_reactions=False,
             supports_threads=True,
-            supports_polls=False
+            supports_polls=False,
         )
         self._credentials = None
 
@@ -37,7 +37,7 @@ class GoogleChatChannel(ChannelPlugin):
 
         try:
             from pathlib import Path
-            
+
             # Verify credentials file exists
             cred_path = Path(credentials_file).expanduser()
             if not cred_path.exists():
@@ -46,21 +46,19 @@ class GoogleChatChannel(ChannelPlugin):
                 self._running = True  # Framework mode
                 logger.info("Google Chat channel started (framework mode)")
                 return
-            
+
             # Try to import Google Cloud libraries
             try:
                 from google.cloud import pubsub_v1
                 from google.oauth2 import service_account
-                
+
                 # Load credentials
-                credentials = service_account.Credentials.from_service_account_file(
-                    str(cred_path)
-                )
-                
+                service_account.Credentials.from_service_account_file(str(cred_path))
+
                 logger.info(f"Google Chat configured for project: {project_id}")
                 self._running = True
                 logger.info("Google Chat channel ready")
-                
+
             except ImportError:
                 logger.warning("google-cloud-pubsub not installed")
                 logger.warning("Install with: pip install google-cloud-pubsub google-auth")
@@ -78,7 +76,7 @@ class GoogleChatChannel(ChannelPlugin):
         logger.info("Stopping Google Chat channel...")
         self._running = False
 
-    async def send_text(self, target: str, text: str, reply_to: Optional[str] = None) -> str:
+    async def send_text(self, target: str, text: str, reply_to: str | None = None) -> str:
         """Send text message"""
         if not self._running:
             raise RuntimeError("Google Chat channel not started")
@@ -88,11 +86,7 @@ class GoogleChatChannel(ChannelPlugin):
         return f"googlechat-msg-{datetime.utcnow().timestamp()}"
 
     async def send_media(
-        self,
-        target: str,
-        media_url: str,
-        media_type: str,
-        caption: Optional[str] = None
+        self, target: str, media_url: str, media_type: str, caption: str | None = None
     ) -> str:
         """Send media message"""
         if not self._running:

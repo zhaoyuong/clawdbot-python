@@ -1,7 +1,7 @@
 """tlon channel plugin"""
 
-from clawdbot.channels.tlon import TlonChannel
 from clawdbot.channels.registry import get_channel_registry
+from clawdbot.channels.tlon import TlonChannel
 
 
 def register(api):

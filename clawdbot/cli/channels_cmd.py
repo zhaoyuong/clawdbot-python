@@ -65,9 +65,7 @@ def login(
 
 
 @channels_app.command("logout")
-def logout(
-    channel: str = typer.Argument(..., help="Channel to logout")
-) -> None:
+def logout(channel: str = typer.Argument(..., help="Channel to logout")) -> None:
     """Logout from a messaging channel"""
     console.print(f"[yellow]Logging out from {channel}...[/yellow]")
     # TODO: Implement channel logout
@@ -75,9 +73,7 @@ def logout(
 
 
 @channels_app.command("status")
-def status(
-    channel: str = typer.Argument(..., help="Channel to check status")
-) -> None:
+def status(channel: str = typer.Argument(..., help="Channel to check status")) -> None:
     """Check channel connection status"""
     console.print(f"[cyan]Checking {channel} status...[/cyan]")
     # TODO: Implement channel status check

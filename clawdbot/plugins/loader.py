@@ -1,13 +1,12 @@
 """Plugin loader and discovery"""
 
+import importlib.util
 import json
 import logging
-from pathlib import Path
-from typing import Optional
-import importlib.util
 import sys
+from pathlib import Path
 
-from .types import PluginManifest, Plugin, PluginAPI
+from .types import Plugin, PluginAPI, PluginManifest
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +39,7 @@ class PluginLoader:
         logger.info(f"Discovered {len(plugin_dirs)} plugins")
         return plugin_dirs
 
-    def load_plugin(self, plugin_dir: Path) -> Optional[Plugin]:
+    def load_plugin(self, plugin_dir: Path) -> Plugin | None:
         """Load a single plugin"""
         try:
             # Load manifest
@@ -49,7 +48,7 @@ class PluginLoader:
                 logger.warning(f"No plugin.json in {plugin_dir}")
                 return None
 
-            with open(manifest_file, 'r') as f:
+            with open(manifest_file) as f:
                 manifest_data = json.load(f)
 
             manifest = PluginManifest(**manifest_data)
@@ -76,8 +75,7 @@ class PluginLoader:
         try:
             # Create module spec
             spec = importlib.util.spec_from_file_location(
-                f"clawdbot_plugin_{plugin.manifest.id}",
-                module_file
+                f"clawdbot_plugin_{plugin.manifest.id}", module_file
             )
 
             if spec and spec.loader:
@@ -86,11 +84,11 @@ class PluginLoader:
                 spec.loader.exec_module(module)
 
                 # Look for register() or activate() function
-                if hasattr(module, 'register'):
+                if hasattr(module, "register"):
                     api = PluginAPI(plugin.manifest.id)
                     self._plugin_apis[plugin.manifest.id] = api
                     module.register(api)
-                elif hasattr(module, 'activate'):
+                elif hasattr(module, "activate"):
                     api = PluginAPI(plugin.manifest.id)
                     self._plugin_apis[plugin.manifest.id] = api
                     module.activate(api)
@@ -107,11 +105,11 @@ class PluginLoader:
 
         return self.plugins
 
-    def get_plugin(self, plugin_id: str) -> Optional[Plugin]:
+    def get_plugin(self, plugin_id: str) -> Plugin | None:
         """Get a loaded plugin"""
         return self.plugins.get(plugin_id)
 
-    def get_plugin_api(self, plugin_id: str) -> Optional[PluginAPI]:
+    def get_plugin_api(self, plugin_id: str) -> PluginAPI | None:
         """Get plugin API instance"""
         return self._plugin_apis.get(plugin_id)
 

@@ -1,10 +1,10 @@
 """Mattermost channel implementation"""
 
 import logging
-from typing import Any, Optional
 from datetime import datetime
+from typing import Any
 
-from .base import ChannelPlugin, ChannelCapabilities, InboundMessage
+from .base import ChannelCapabilities, ChannelPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class MattermostChannel(ChannelPlugin):
             supports_media=True,
             supports_reactions=True,
             supports_threads=True,
-            supports_polls=False
+            supports_polls=False,
         )
         self._driver = None
 
@@ -42,24 +42,26 @@ class MattermostChannel(ChannelPlugin):
 
         try:
             from mattermostdriver import Driver
-            
-            self._driver = Driver({
-                'url': url,
-                'token': token,
-                'login_id': username,
-                'password': password,
-                'scheme': 'https',
-                'port': 443
-            })
-            
+
+            self._driver = Driver(
+                {
+                    "url": url,
+                    "token": token,
+                    "login_id": username,
+                    "password": password,
+                    "scheme": "https",
+                    "port": 443,
+                }
+            )
+
             if token:
                 self._driver.login()
             else:
                 self._driver.login()
-            
-            user = self._driver.users.get_user('me')
+
+            user = self._driver.users.get_user("me")
             logger.info(f"Mattermost bot: {user['username']}")
-            
+
             self._running = True
             logger.info("Mattermost channel started")
 
@@ -79,7 +81,7 @@ class MattermostChannel(ChannelPlugin):
             self._driver.logout()
         self._running = False
 
-    async def send_text(self, target: str, text: str, reply_to: Optional[str] = None) -> str:
+    async def send_text(self, target: str, text: str, reply_to: str | None = None) -> str:
         """Send text message"""
         if not self._running:
             raise RuntimeError("Mattermost channel not started")
@@ -89,26 +91,19 @@ class MattermostChannel(ChannelPlugin):
             return f"mm-msg-{datetime.utcnow().timestamp()}"
 
         try:
-            post = {
-                'channel_id': target,
-                'message': text
-            }
+            post = {"channel_id": target, "message": text}
             if reply_to:
-                post['root_id'] = reply_to
-            
+                post["root_id"] = reply_to
+
             result = self._driver.posts.create_post(post)
-            return result['id']
+            return result["id"]
 
         except Exception as e:
             logger.error(f"Mattermost send error: {e}", exc_info=True)
             raise
 
     async def send_media(
-        self,
-        target: str,
-        media_url: str,
-        media_type: str,
-        caption: Optional[str] = None
+        self, target: str, media_url: str, media_type: str, caption: str | None = None
     ) -> str:
         """Send media message"""
         if not self._running:

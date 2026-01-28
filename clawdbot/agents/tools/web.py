@@ -2,6 +2,7 @@
 
 import logging
 from typing import Any
+
 import httpx
 
 from .base import AgentTool, ToolResult
@@ -20,13 +21,8 @@ class WebFetchTool(AgentTool):
     def get_schema(self) -> dict[str, Any]:
         return {
             "type": "object",
-            "properties": {
-                "url": {
-                    "type": "string",
-                    "description": "URL to fetch"
-                }
-            },
-            "required": ["url"]
+            "properties": {"url": {"type": "string", "description": "URL to fetch"}},
+            "required": ["url"],
         }
 
     async def execute(self, params: dict[str, Any]) -> ToolResult:
@@ -42,7 +38,7 @@ class WebFetchTool(AgentTool):
                 response.raise_for_status()
 
                 content_type = response.headers.get("content-type", "")
-                
+
                 if "text" in content_type or "html" in content_type:
                     # Return text content
                     return ToolResult(
@@ -51,8 +47,8 @@ class WebFetchTool(AgentTool):
                         metadata={
                             "status_code": response.status_code,
                             "content_type": content_type,
-                            "url": str(response.url)
-                        }
+                            "url": str(response.url),
+                        },
                     )
                 else:
                     # Non-text content
@@ -62,15 +58,13 @@ class WebFetchTool(AgentTool):
                         metadata={
                             "status_code": response.status_code,
                             "content_type": content_type,
-                            "size": len(response.content)
-                        }
+                            "size": len(response.content),
+                        },
                     )
 
         except httpx.HTTPStatusError as e:
             return ToolResult(
-                success=False,
-                content="",
-                error=f"HTTP {e.response.status_code}: {str(e)}"
+                success=False, content="", error=f"HTTP {e.response.status_code}: {str(e)}"
             )
         except Exception as e:
             logger.error(f"Web fetch error: {e}", exc_info=True)
@@ -89,17 +83,14 @@ class WebSearchTool(AgentTool):
         return {
             "type": "object",
             "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "Search query"
-                },
+                "query": {"type": "string", "description": "Search query"},
                 "num_results": {
                     "type": "integer",
                     "description": "Number of results to return",
-                    "default": 5
-                }
+                    "default": 5,
+                },
             },
-            "required": ["query"]
+            "required": ["query"],
         }
 
     async def execute(self, params: dict[str, Any]) -> ToolResult:
@@ -112,12 +103,11 @@ class WebSearchTool(AgentTool):
 
         try:
             from duckduckgo_search import DDGS
-            
+
             # Perform search
-            results = []
             with DDGS() as ddgs:
                 search_results = list(ddgs.text(query, max_results=num_results))
-            
+
             # Format results
             if search_results:
                 formatted = []
@@ -127,25 +117,23 @@ class WebSearchTool(AgentTool):
                         f"   URL: {result.get('href', 'No URL')}\n"
                         f"   {result.get('body', 'No description')}\n"
                     )
-                
+
                 content = "\n".join(formatted)
                 return ToolResult(
                     success=True,
                     content=content,
-                    metadata={"count": len(search_results), "query": query}
+                    metadata={"count": len(search_results), "query": query},
                 )
             else:
                 return ToolResult(
-                    success=True,
-                    content="No results found",
-                    metadata={"count": 0, "query": query}
+                    success=True, content="No results found", metadata={"count": 0, "query": query}
                 )
-                
+
         except ImportError:
             return ToolResult(
                 success=False,
                 content="",
-                error="duckduckgo-search not installed. Install with: pip install duckduckgo-search"
+                error="duckduckgo-search not installed. Install with: pip install duckduckgo-search",
             )
         except Exception as e:
             logger.error(f"Web search error: {e}", exc_info=True)

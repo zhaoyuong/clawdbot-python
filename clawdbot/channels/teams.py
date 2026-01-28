@@ -1,10 +1,10 @@
 """Microsoft Teams channel implementation"""
 
 import logging
-from typing import Any, Optional
 from datetime import datetime
+from typing import Any
 
-from .base import ChannelPlugin, ChannelCapabilities, InboundMessage
+from .base import ChannelCapabilities, ChannelPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class TeamsChannel(ChannelPlugin):
             supports_media=True,
             supports_reactions=True,
             supports_threads=True,
-            supports_polls=False
+            supports_polls=False,
         )
         self._adapter = None
         self._app_id = None
@@ -41,7 +41,7 @@ class TeamsChannel(ChannelPlugin):
             logger.warning("Teams channel requires Bot Framework SDK")
             logger.warning("Install: pip install botbuilder-core botframework-connector")
             logger.info(f"Teams bot configured with app ID: {self._app_id}")
-            
+
             self._running = True
             logger.info("Teams channel started (framework ready)")
 
@@ -54,7 +54,7 @@ class TeamsChannel(ChannelPlugin):
         logger.info("Stopping Teams channel...")
         self._running = False
 
-    async def send_text(self, target: str, text: str, reply_to: Optional[str] = None) -> str:
+    async def send_text(self, target: str, text: str, reply_to: str | None = None) -> str:
         """Send text message"""
         if not self._running:
             raise RuntimeError("Teams channel not started")
@@ -63,11 +63,7 @@ class TeamsChannel(ChannelPlugin):
         return f"teams-msg-{datetime.utcnow().timestamp()}"
 
     async def send_media(
-        self,
-        target: str,
-        media_url: str,
-        media_type: str,
-        caption: Optional[str] = None
+        self, target: str, media_url: str, media_type: str, caption: str | None = None
     ) -> str:
         """Send media message"""
         if not self._running:

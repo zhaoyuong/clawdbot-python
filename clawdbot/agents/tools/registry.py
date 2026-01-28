@@ -1,28 +1,39 @@
 """Tool registry"""
 
-from typing import Optional, Any
+from typing import Any, Optional
+
+from ..session import SessionManager
 from .base import AgentTool
 from .bash import BashTool
-from .file_ops import ReadFileTool, WriteFileTool, EditFileTool
-from .web import WebFetchTool, WebSearchTool
-from .image import ImageTool
-from .sessions import SessionsListTool, SessionsHistoryTool, SessionsSendTool, SessionsSpawnTool
 from .browser import BrowserTool
+from .canvas import CanvasTool
+from .channel_actions import (
+    DiscordActionsTool,
+    MessageTool,
+    SlackActionsTool,
+    TelegramActionsTool,
+    WhatsAppActionsTool,
+)
 from .cron import CronTool
-from .tts import TTSTool
-from .process import ProcessTool
-from .channel_actions import MessageTool, TelegramActionsTool, DiscordActionsTool, SlackActionsTool, WhatsAppActionsTool
+from .file_ops import EditFileTool, ReadFileTool, WriteFileTool
+from .image import ImageTool
 from .nodes import NodesTool
 from .patch import ApplyPatchTool
-from .canvas import CanvasTool
+from .process import ProcessTool
+from .sessions import SessionsHistoryTool, SessionsListTool, SessionsSendTool, SessionsSpawnTool
+from .tts import TTSTool
 from .voice_call import VoiceCallTool
-from ..session import SessionManager
+from .web import WebFetchTool, WebSearchTool
 
 
 class ToolRegistry:
     """Registry of available tools"""
 
-    def __init__(self, session_manager: Optional['SessionManager'] = None, channel_registry: Optional[Any] = None):
+    def __init__(
+        self,
+        session_manager: Optional["SessionManager"] = None,
+        channel_registry: Any | None = None,
+    ):
         self._tools: dict[str, AgentTool] = {}
         self._session_manager = session_manager  # Must be provided when needed
         self._channel_registry = channel_registry
@@ -42,22 +53,22 @@ class ToolRegistry:
         # Web tools
         self.register(WebFetchTool())
         self.register(WebSearchTool())
-        
+
         # Image analysis
         self.register(ImageTool())
-        
+
         # Session management
         self.register(SessionsListTool(self._session_manager))
         self.register(SessionsHistoryTool(self._session_manager))
         self.register(SessionsSendTool(self._session_manager))
         self.register(SessionsSpawnTool(self._session_manager))
-        
+
         # Advanced tools
         self.register(BrowserTool())
         self.register(CronTool())
         self.register(TTSTool())
         self.register(ProcessTool())
-        
+
         # Channel actions (if channel registry available)
         if self._channel_registry:
             self.register(MessageTool(self._channel_registry))
@@ -65,12 +76,12 @@ class ToolRegistry:
             self.register(DiscordActionsTool(self._channel_registry))
             self.register(SlackActionsTool(self._channel_registry))
             self.register(WhatsAppActionsTool(self._channel_registry))
-        
+
         # Special features
         self.register(NodesTool())
         self.register(CanvasTool())
         self.register(VoiceCallTool())
-        
+
         # Patch tool
         self.register(ApplyPatchTool())
 
@@ -78,7 +89,7 @@ class ToolRegistry:
         """Register a tool"""
         self._tools[tool.name] = tool
 
-    def get(self, name: str) -> Optional[AgentTool]:
+    def get(self, name: str) -> AgentTool | None:
         """Get tool by name"""
         return self._tools.get(name)
 
@@ -97,7 +108,7 @@ class ToolRegistry:
                 self.get("write_file"),
                 self.get("edit_file"),
                 self.get("bash"),
-                self.get("web_fetch")
+                self.get("web_fetch"),
             ]
         elif profile == "messaging":
             return [self.get("web_fetch"), self.get("web_search")]
@@ -109,7 +120,7 @@ class ToolRegistry:
 _global_registry = ToolRegistry()
 
 
-def get_tool_registry(session_manager: Optional[Any] = None) -> ToolRegistry:
+def get_tool_registry(session_manager: Any | None = None) -> ToolRegistry:
     """Get global tool registry"""
     global _global_registry
     if _global_registry is None:

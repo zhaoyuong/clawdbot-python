@@ -1,9 +1,8 @@
 """Cron job management tool using APScheduler"""
 
 import logging
-from typing import Any, Optional
 from datetime import datetime
-import json
+from typing import Any
 
 from .base import AgentTool, ToolResult
 
@@ -27,7 +26,7 @@ class CronTool(AgentTool):
 
         try:
             from apscheduler.schedulers.asyncio import AsyncIOScheduler
-            
+
             self._scheduler = AsyncIOScheduler()
             self._scheduler.start()
             logger.info("Cron scheduler initialized")
@@ -42,31 +41,22 @@ class CronTool(AgentTool):
                 "action": {
                     "type": "string",
                     "enum": ["add", "list", "remove", "status", "update", "run"],
-                    "description": "Cron action to perform"
+                    "description": "Cron action to perform",
                 },
-                "job_id": {
-                    "type": "string",
-                    "description": "Job identifier"
-                },
+                "job_id": {"type": "string", "description": "Job identifier"},
                 "schedule": {
                     "type": "string",
-                    "description": "Schedule in cron format or natural language (e.g., 'daily at 9am', '0 9 * * *')"
+                    "description": "Schedule in cron format or natural language (e.g., 'daily at 9am', '0 9 * * *')",
                 },
-                "task": {
-                    "type": "string",
-                    "description": "Task description or command to execute"
-                },
-                "message": {
-                    "type": "string",
-                    "description": "Message to send when job runs"
-                },
+                "task": {"type": "string", "description": "Task description or command to execute"},
+                "message": {"type": "string", "description": "Message to send when job runs"},
                 "session_id": {
                     "type": "string",
                     "description": "Target session for notifications",
-                    "default": "main"
-                }
+                    "default": "main",
+                },
             },
-            "required": ["action"]
+            "required": ["action"],
         }
 
     async def execute(self, params: dict[str, Any]) -> ToolResult:
@@ -92,11 +82,7 @@ class CronTool(AgentTool):
             elif action == "run":
                 return await self._run_job(params)
             else:
-                return ToolResult(
-                    success=False,
-                    content="",
-                    error=f"Unknown action: {action}"
-                )
+                return ToolResult(success=False, content="", error=f"Unknown action: {action}")
 
         except ImportError as e:
             return ToolResult(success=False, content="", error=str(e))
@@ -114,32 +100,23 @@ class CronTool(AgentTool):
 
         if not schedule or not (task or message):
             return ToolResult(
-                success=False,
-                content="",
-                error="schedule and (task or message) required"
+                success=False, content="", error="schedule and (task or message) required"
             )
 
         # Parse schedule
         trigger_kwargs = self._parse_schedule(schedule)
-        
+
         if not trigger_kwargs:
             return ToolResult(
-                success=False,
-                content="",
-                error=f"Invalid schedule format: {schedule}"
+                success=False, content="", error=f"Invalid schedule format: {schedule}"
             )
 
         # Add job to scheduler
-        job = self._scheduler.add_job(
+        self._scheduler.add_job(
             self._job_callback,
             **trigger_kwargs,
             id=job_id,
-            kwargs={
-                "job_id": job_id,
-                "task": task,
-                "message": message,
-                "session_id": session_id
-            }
+            kwargs={"job_id": job_id, "task": task, "message": message, "session_id": session_id},
         )
 
         # Store job info
@@ -150,33 +127,29 @@ class CronTool(AgentTool):
             "message": message,
             "session_id": session_id,
             "created": datetime.utcnow().isoformat(),
-            "runs": 0
+            "runs": 0,
         }
 
         return ToolResult(
             success=True,
             content=f"Created job '{job_id}' with schedule '{schedule}'",
-            metadata={"job_id": job_id}
+            metadata={"job_id": job_id},
         )
 
-    def _parse_schedule(self, schedule: str) -> Optional[dict]:
+    def _parse_schedule(self, schedule: str) -> dict | None:
         """Parse schedule string to APScheduler trigger kwargs"""
         from apscheduler.triggers.cron import CronTrigger
         from apscheduler.triggers.interval import IntervalTrigger
-        
+
         # Try cron format
-        if any(c in schedule for c in ['*', ',']):
+        if any(c in schedule for c in ["*", ","]):
             try:
                 parts = schedule.split()
                 if len(parts) == 5:
                     minute, hour, day, month, day_of_week = parts
                     return {
                         "trigger": CronTrigger(
-                            minute=minute,
-                            hour=hour,
-                            day=day,
-                            month=month,
-                            day_of_week=day_of_week
+                            minute=minute, hour=hour, day=day, month=month, day_of_week=day_of_week
                         )
                     }
             except:
@@ -184,7 +157,7 @@ class CronTool(AgentTool):
 
         # Natural language patterns
         schedule_lower = schedule.lower()
-        
+
         if "every" in schedule_lower:
             # Extract interval
             if "minute" in schedule_lower:
@@ -197,19 +170,20 @@ class CronTool(AgentTool):
         if "daily" in schedule_lower or "every day" in schedule_lower:
             # Extract time if present
             import re
-            time_match = re.search(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm)?', schedule_lower)
+
+            time_match = re.search(r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)?", schedule_lower)
             if time_match:
                 hour = int(time_match.group(1))
                 minute = int(time_match.group(2)) if time_match.group(2) else 0
                 am_pm = time_match.group(3)
-                
-                if am_pm == 'pm' and hour < 12:
+
+                if am_pm == "pm" and hour < 12:
                     hour += 12
-                elif am_pm == 'am' and hour == 12:
+                elif am_pm == "am" and hour == 12:
                     hour = 0
-                
+
                 return {"trigger": CronTrigger(hour=hour, minute=minute)}
-            
+
             return {"trigger": CronTrigger(hour=9, minute=0)}  # Default to 9am
 
         return None
@@ -217,7 +191,7 @@ class CronTool(AgentTool):
     async def _job_callback(self, job_id: str, task: str, message: str, session_id: str):
         """Job execution callback"""
         logger.info(f"Executing job '{job_id}': {task or message}")
-        
+
         # Update run count
         if job_id in self._jobs:
             self._jobs[job_id]["runs"] += 1
@@ -230,11 +204,7 @@ class CronTool(AgentTool):
     async def _list_jobs(self, params: dict[str, Any]) -> ToolResult:
         """List all jobs"""
         if not self._jobs:
-            return ToolResult(
-                success=True,
-                content="No scheduled jobs",
-                metadata={"count": 0}
-            )
+            return ToolResult(success=True, content="No scheduled jobs", metadata={"count": 0})
 
         output = f"Scheduled jobs ({len(self._jobs)}):\n\n"
         for job_id, job_info in self._jobs.items():
@@ -242,14 +212,14 @@ class CronTool(AgentTool):
             output += f"  Schedule: {job_info['schedule']}\n"
             output += f"  Task: {job_info.get('task', 'N/A')}\n"
             output += f"  Runs: {job_info['runs']}\n"
-            if 'last_run' in job_info:
+            if "last_run" in job_info:
                 output += f"  Last run: {job_info['last_run']}\n"
             output += "\n"
 
         return ToolResult(
             success=True,
             content=output,
-            metadata={"count": len(self._jobs), "jobs": list(self._jobs.values())}
+            metadata={"count": len(self._jobs), "jobs": list(self._jobs.values())},
         )
 
     async def _remove_job(self, params: dict[str, Any]) -> ToolResult:
@@ -260,22 +230,15 @@ class CronTool(AgentTool):
             return ToolResult(success=False, content="", error="job_id required")
 
         if job_id not in self._jobs:
-            return ToolResult(
-                success=False,
-                content="",
-                error=f"Job '{job_id}' not found"
-            )
+            return ToolResult(success=False, content="", error=f"Job '{job_id}' not found")
 
         # Remove from scheduler
         self._scheduler.remove_job(job_id)
-        
+
         # Remove from our tracking
         del self._jobs[job_id]
 
-        return ToolResult(
-            success=True,
-            content=f"Removed job '{job_id}'"
-        )
+        return ToolResult(success=True, content=f"Removed job '{job_id}'")
 
     async def _job_status(self, params: dict[str, Any]) -> ToolResult:
         """Get job status"""
@@ -286,32 +249,21 @@ class CronTool(AgentTool):
             return ToolResult(
                 success=True,
                 content=f"Scheduler running with {len(self._jobs)} jobs",
-                metadata={
-                    "running": self._scheduler.running,
-                    "job_count": len(self._jobs)
-                }
+                metadata={"running": self._scheduler.running, "job_count": len(self._jobs)},
             )
 
         if job_id not in self._jobs:
-            return ToolResult(
-                success=False,
-                content="",
-                error=f"Job '{job_id}' not found"
-            )
+            return ToolResult(success=False, content="", error=f"Job '{job_id}' not found")
 
         job_info = self._jobs[job_id]
         output = f"Job '{job_id}':\n"
         output += f"  Schedule: {job_info['schedule']}\n"
         output += f"  Task: {job_info.get('task', 'N/A')}\n"
         output += f"  Runs: {job_info['runs']}\n"
-        if 'last_run' in job_info:
+        if "last_run" in job_info:
             output += f"  Last run: {job_info['last_run']}\n"
 
-        return ToolResult(
-            success=True,
-            content=output,
-            metadata=job_info
-        )
+        return ToolResult(success=True, content=output, metadata=job_info)
 
     async def _update_job(self, params: dict[str, Any]) -> ToolResult:
         """Update job"""
@@ -322,11 +274,7 @@ class CronTool(AgentTool):
             return ToolResult(success=False, content="", error="job_id required")
 
         if job_id not in self._jobs:
-            return ToolResult(
-                success=False,
-                content="",
-                error=f"Job '{job_id}' not found"
-            )
+            return ToolResult(success=False, content="", error=f"Job '{job_id}' not found")
 
         # For now, just update the schedule if provided
         if schedule:
@@ -335,10 +283,7 @@ class CronTool(AgentTool):
                 self._scheduler.reschedule_job(job_id, **trigger_kwargs)
                 self._jobs[job_id]["schedule"] = schedule
 
-        return ToolResult(
-            success=True,
-            content=f"Updated job '{job_id}'"
-        )
+        return ToolResult(success=True, content=f"Updated job '{job_id}'")
 
     async def _run_job(self, params: dict[str, Any]) -> ToolResult:
         """Run job immediately"""
@@ -348,18 +293,11 @@ class CronTool(AgentTool):
             return ToolResult(success=False, content="", error="job_id required")
 
         if job_id not in self._jobs:
-            return ToolResult(
-                success=False,
-                content="",
-                error=f"Job '{job_id}' not found"
-            )
+            return ToolResult(success=False, content="", error=f"Job '{job_id}' not found")
 
         # Get job and run it
         job = self._scheduler.get_job(job_id)
         if job:
             job.modify(next_run_time=datetime.now())
 
-        return ToolResult(
-            success=True,
-            content=f"Triggered job '{job_id}'"
-        )
+        return ToolResult(success=True, content=f"Triggered job '{job_id}'")

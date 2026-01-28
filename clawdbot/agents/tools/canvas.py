@@ -2,7 +2,6 @@
 
 import logging
 from typing import Any
-from datetime import datetime
 
 from .base import AgentTool, ToolResult
 
@@ -25,27 +24,23 @@ class CanvasTool(AgentTool):
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["present", "hide", "navigate", "eval", "snapshot", "a2ui_push", "a2ui_reset"],
-                    "description": "Canvas action to perform"
+                    "enum": [
+                        "present",
+                        "hide",
+                        "navigate",
+                        "eval",
+                        "snapshot",
+                        "a2ui_push",
+                        "a2ui_reset",
+                    ],
+                    "description": "Canvas action to perform",
                 },
-                "url": {
-                    "type": "string",
-                    "description": "URL to present or navigate to"
-                },
-                "code": {
-                    "type": "string",
-                    "description": "JavaScript code to evaluate in canvas"
-                },
-                "data": {
-                    "type": "object",
-                    "description": "Data for A2UI push"
-                },
-                "output_path": {
-                    "type": "string",
-                    "description": "Path to save snapshot"
-                }
+                "url": {"type": "string", "description": "URL to present or navigate to"},
+                "code": {"type": "string", "description": "JavaScript code to evaluate in canvas"},
+                "data": {"type": "object", "description": "Data for A2UI push"},
+                "output_path": {"type": "string", "description": "Path to save snapshot"},
             },
-            "required": ["action"]
+            "required": ["action"],
         }
 
     async def execute(self, params: dict[str, Any]) -> ToolResult:
@@ -71,11 +66,7 @@ class CanvasTool(AgentTool):
             elif action == "a2ui_reset":
                 return await self._a2ui_reset(params)
             else:
-                return ToolResult(
-                    success=False,
-                    content="",
-                    error=f"Unknown action: {action}"
-                )
+                return ToolResult(success=False, content="", error=f"Unknown action: {action}")
 
         except Exception as e:
             logger.error(f"Canvas tool error: {e}", exc_info=True)
@@ -96,10 +87,7 @@ class CanvasTool(AgentTool):
         return ToolResult(
             success=True,
             content=f"Canvas presented with {url}",
-            metadata={
-                "active": True,
-                "url": url
-            }
+            metadata={"active": True, "url": url},
         )
 
     async def _hide(self, params: dict[str, Any]) -> ToolResult:
@@ -107,10 +95,7 @@ class CanvasTool(AgentTool):
         self._canvas_active = False
         self._canvas_url = None
 
-        return ToolResult(
-            success=True,
-            content="Canvas hidden"
-        )
+        return ToolResult(success=True, content="Canvas hidden")
 
     async def _navigate(self, params: dict[str, Any]) -> ToolResult:
         """Navigate canvas to URL"""
@@ -121,17 +106,12 @@ class CanvasTool(AgentTool):
 
         if not self._canvas_active:
             return ToolResult(
-                success=False,
-                content="",
-                error="Canvas not active. Use action='present' first."
+                success=False, content="", error="Canvas not active. Use action='present' first."
             )
 
         self._canvas_url = url
 
-        return ToolResult(
-            success=True,
-            content=f"Canvas navigated to {url}"
-        )
+        return ToolResult(success=True, content=f"Canvas navigated to {url}")
 
     async def _eval(self, params: dict[str, Any]) -> ToolResult:
         """Evaluate JavaScript in canvas"""
@@ -141,11 +121,7 @@ class CanvasTool(AgentTool):
             return ToolResult(success=False, content="", error="code required")
 
         if not self._canvas_active:
-            return ToolResult(
-                success=False,
-                content="",
-                error="Canvas not active"
-            )
+            return ToolResult(success=False, content="", error="Canvas not active")
 
         # This would require browser automation or canvas server
         logger.warning("Canvas eval requires canvas server integration")
@@ -153,26 +129,22 @@ class CanvasTool(AgentTool):
         return ToolResult(
             success=False,
             content="",
-            error="Canvas eval not fully implemented - requires canvas server"
+            error="Canvas eval not fully implemented - requires canvas server",
         )
 
     async def _snapshot(self, params: dict[str, Any]) -> ToolResult:
         """Take canvas snapshot"""
-        output_path = params.get("output_path", "canvas_snapshot.png")
+        params.get("output_path", "canvas_snapshot.png")
 
         if not self._canvas_active:
-            return ToolResult(
-                success=False,
-                content="",
-                error="Canvas not active"
-            )
+            return ToolResult(success=False, content="", error="Canvas not active")
 
         logger.warning("Canvas snapshot requires canvas server")
 
         return ToolResult(
             success=False,
             content="",
-            error="Canvas snapshot not fully implemented - requires canvas server"
+            error="Canvas snapshot not fully implemented - requires canvas server",
         )
 
     async def _a2ui_push(self, params: dict[str, Any]) -> ToolResult:
@@ -185,17 +157,12 @@ class CanvasTool(AgentTool):
         logger.info(f"A2UI push: {data}")
 
         return ToolResult(
-            success=True,
-            content="A2UI data pushed (placeholder)",
-            metadata={"data": data}
+            success=True, content="A2UI data pushed (placeholder)", metadata={"data": data}
         )
 
     async def _a2ui_reset(self, params: dict[str, Any]) -> ToolResult:
         """Reset A2UI state"""
-        return ToolResult(
-            success=True,
-            content="A2UI reset"
-        )
+        return ToolResult(success=True, content="A2UI reset")
 
 
 # Note: Full Canvas/A2UI implementation requires:

@@ -97,8 +97,8 @@ Documentation = "https://github.com/zhaoyuong/clawdbot-python/tree/main/docs"
 Repository = "https://github.com/zhaoyuong/clawdbot-python"
 Issues = "https://github.com/zhaoyuong/clawdbot-python/issues"
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
     "pytest-cov>=4.1.0",
@@ -118,11 +118,25 @@ target-version = ['py311']
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-select = ["E", "F", "I", "N", "W", "UP"]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP"]
+ignore = [
+    "E501",  # Line too long (handled by black)
+    "E722",  # Bare except (some tools need it)
+    "E402",  # Module level import not at top (some cases need lazy import)
+]
+
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 "tests/**" = ["F401", "F811"]
+"examples/*.py" = ["F401"]  # Examples may have unused imports
+"extensions/*/plugin.py" = ["F401", "F821"]  # Extensions are stubs
+"clawdbot/channels/*.py" = ["F401", "F821"]  # Channels may be incomplete
+"clawdbot/config/schema.py" = ["N815"]  # Keep TypeScript naming
+"clawdbot/gateway/protocol/*.py" = ["N815"]  # Protocol uses camelCase
+"clawdbot/web/app.py" = ["F821"]  # Web app is optional
+"clawdbot/cli/main.py" = ["F401"]  # CLI checks imports for availability
 
 [tool.mypy]
 python_version = "3.11"

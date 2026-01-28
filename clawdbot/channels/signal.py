@@ -1,10 +1,10 @@
 """Signal channel implementation"""
 
 import logging
-from typing import Any, Optional
 from datetime import datetime
+from typing import Any
 
-from .base import ChannelPlugin, ChannelCapabilities, InboundMessage
+from .base import ChannelCapabilities, ChannelPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +21,10 @@ class SignalChannel(ChannelPlugin):
             supports_media=True,
             supports_reactions=True,
             supports_threads=False,
-            supports_polls=False
+            supports_polls=False,
         )
         self._bot = None
-        self._phone_number: Optional[str] = None
+        self._phone_number: str | None = None
 
     async def start(self, config: dict[str, Any]) -> None:
         """Start Signal bot"""
@@ -37,25 +37,23 @@ class SignalChannel(ChannelPlugin):
 
         try:
             # Signal-cli integration via subprocess
-            import subprocess
             import shutil
-            
+            import subprocess
+
             # Check if signal-cli is installed
             signal_cli = shutil.which("signal-cli")
             if not signal_cli:
                 logger.warning("signal-cli not found in PATH")
                 logger.warning("Install from: https://github.com/AsamK/signal-cli")
                 self._running = True  # Allow framework mode
-                logger.info("Signal channel started (framework mode - signal-cli needed for full functionality)")
+                logger.info(
+                    "Signal channel started (framework mode - signal-cli needed for full functionality)"
+                )
                 return
-            
+
             # Test signal-cli
-            result = subprocess.run(
-                [signal_cli, "--version"],
-                capture_output=True,
-                text=True
-            )
-            
+            result = subprocess.run([signal_cli, "--version"], capture_output=True, text=True)
+
             if result.returncode == 0:
                 logger.info(f"signal-cli found: {result.stdout.strip()}")
                 self._running = True
@@ -75,7 +73,7 @@ class SignalChannel(ChannelPlugin):
         logger.info("Stopping Signal channel...")
         self._running = False
 
-    async def send_text(self, target: str, text: str, reply_to: Optional[str] = None) -> str:
+    async def send_text(self, target: str, text: str, reply_to: str | None = None) -> str:
         """Send text message"""
         if not self._running:
             raise RuntimeError("Signal channel not started")
@@ -85,11 +83,7 @@ class SignalChannel(ChannelPlugin):
         return f"signal-msg-{datetime.utcnow().timestamp()}"
 
     async def send_media(
-        self,
-        target: str,
-        media_url: str,
-        media_type: str,
-        caption: Optional[str] = None
+        self, target: str, media_url: str, media_type: str, caption: str | None = None
     ) -> str:
         """Send media message"""
         if not self._running:

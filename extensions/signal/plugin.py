@@ -1,7 +1,7 @@
 """Signal channel plugin"""
 
-from clawdbot.channels.signal import SignalChannel
 from clawdbot.channels.registry import get_channel_registry
+from clawdbot.channels.signal import SignalChannel
 
 
 def register(api):

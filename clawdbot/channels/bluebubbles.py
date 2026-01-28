@@ -1,10 +1,10 @@
 """BlueBubbles channel implementation"""
 
 import logging
-from typing import Any, Optional
 from datetime import datetime
+from typing import Any
 
-from .base import ChannelPlugin, ChannelCapabilities, InboundMessage
+from .base import ChannelCapabilities, ChannelPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class BlueBubblesChannel(ChannelPlugin):
             supports_media=True,
             supports_reactions=True,
             supports_threads=False,
-            supports_polls=False
+            supports_polls=False,
         )
         self._server_url = None
         self._password = None
@@ -36,7 +36,7 @@ class BlueBubblesChannel(ChannelPlugin):
 
         logger.info("Starting BlueBubbles channel...")
         logger.info(f"Connecting to BlueBubbles server: {self._server_url}")
-        
+
         self._running = True
         logger.info("BlueBubbles channel started (framework ready)")
 
@@ -45,7 +45,7 @@ class BlueBubblesChannel(ChannelPlugin):
         logger.info("Stopping BlueBubbles channel...")
         self._running = False
 
-    async def send_text(self, target: str, text: str, reply_to: Optional[str] = None) -> str:
+    async def send_text(self, target: str, text: str, reply_to: str | None = None) -> str:
         """Send text message via BlueBubbles"""
         if not self._running:
             raise RuntimeError("BlueBubbles channel not started")
@@ -54,11 +54,7 @@ class BlueBubblesChannel(ChannelPlugin):
         return f"bb-msg-{datetime.utcnow().timestamp()}"
 
     async def send_media(
-        self,
-        target: str,
-        media_url: str,
-        media_type: str,
-        caption: Optional[str] = None
+        self, target: str, media_url: str, media_type: str, caption: str | None = None
     ) -> str:
         """Send media message"""
         if not self._running:

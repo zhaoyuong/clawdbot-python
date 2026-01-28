@@ -1,10 +1,10 @@
 """Zalo channel implementation"""
 
 import logging
-from typing import Any, Optional
 from datetime import datetime
+from typing import Any
 
-from .base import ChannelPlugin, ChannelCapabilities, InboundMessage
+from .base import ChannelCapabilities, ChannelPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class ZaloChannel(ChannelPlugin):
             supports_media=True,
             supports_reactions=False,
             supports_threads=False,
-            supports_polls=False
+            supports_polls=False,
         )
         self._access_token = None
 
@@ -37,7 +37,7 @@ class ZaloChannel(ChannelPlugin):
         logger.info("Starting Zalo channel...")
         logger.warning("Zalo channel requires Zalo SDK integration")
         logger.info(f"Zalo bot configured with app ID: {app_id}")
-        
+
         self._running = True
         logger.info("Zalo channel started (framework ready)")
 
@@ -46,7 +46,7 @@ class ZaloChannel(ChannelPlugin):
         logger.info("Stopping Zalo channel...")
         self._running = False
 
-    async def send_text(self, target: str, text: str, reply_to: Optional[str] = None) -> str:
+    async def send_text(self, target: str, text: str, reply_to: str | None = None) -> str:
         """Send text message"""
         if not self._running:
             raise RuntimeError("Zalo channel not started")
@@ -55,11 +55,7 @@ class ZaloChannel(ChannelPlugin):
         return f"zalo-msg-{datetime.utcnow().timestamp()}"
 
     async def send_media(
-        self,
-        target: str,
-        media_url: str,
-        media_type: str,
-        caption: Optional[str] = None
+        self, target: str, media_url: str, media_type: str, caption: str | None = None
     ) -> str:
         """Send media message"""
         if not self._running:

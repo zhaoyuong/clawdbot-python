@@ -3,8 +3,8 @@
 import logging
 from typing import Any
 
-from .base import AgentTool, ToolResult
 from ..session import SessionManager
+from .base import AgentTool, ToolResult
 
 logger = logging.getLogger(__name__)
 
@@ -19,42 +19,38 @@ class SessionsListTool(AgentTool):
         self.session_manager = session_manager
 
     def get_schema(self) -> dict[str, Any]:
-        return {
-            "type": "object",
-            "properties": {},
-            "required": []
-        }
+        return {"type": "object", "properties": {}, "required": []}
 
     async def execute(self, params: dict[str, Any]) -> ToolResult:
         """List sessions"""
         try:
             session_ids = self.session_manager.list_sessions()
-            
+
             sessions_info = []
             for session_id in session_ids:
                 session = self.session_manager.get_session(session_id)
-                sessions_info.append({
-                    "session_id": session_id,
-                    "message_count": len(session.messages),
-                    "last_message": session.messages[-1].timestamp if session.messages else None
-                })
+                sessions_info.append(
+                    {
+                        "session_id": session_id,
+                        "message_count": len(session.messages),
+                        "last_message": (
+                            session.messages[-1].timestamp if session.messages else None
+                        ),
+                    }
+                )
 
             # Format output
             if sessions_info:
                 output = f"Found {len(sessions_info)} session(s):\n\n"
                 for info in sessions_info:
                     output += f"- **{info['session_id']}**: {info['message_count']} messages"
-                    if info['last_message']:
+                    if info["last_message"]:
                         output += f" (last: {info['last_message']})"
                     output += "\n"
             else:
                 output = "No sessions found"
 
-            return ToolResult(
-                success=True,
-                content=output,
-                metadata={"sessions": sessions_info}
-            )
+            return ToolResult(success=True, content=output, metadata={"sessions": sessions_info})
 
         except Exception as e:
             logger.error(f"Sessions list error: {e}", exc_info=True)
@@ -74,17 +70,14 @@ class SessionsHistoryTool(AgentTool):
         return {
             "type": "object",
             "properties": {
-                "session_id": {
-                    "type": "string",
-                    "description": "Session ID to get history from"
-                },
+                "session_id": {"type": "string", "description": "Session ID to get history from"},
                 "limit": {
                     "type": "integer",
                     "description": "Maximum number of messages to return",
-                    "default": 50
-                }
+                    "default": 50,
+                },
             },
-            "required": ["session_id"]
+            "required": ["session_id"],
         }
 
     async def execute(self, params: dict[str, Any]) -> ToolResult:
@@ -103,7 +96,7 @@ class SessionsHistoryTool(AgentTool):
                 return ToolResult(
                     success=True,
                     content=f"No messages in session '{session_id}'",
-                    metadata={"session_id": session_id, "count": 0}
+                    metadata={"session_id": session_id, "count": 0},
                 )
 
             # Format messages
@@ -114,10 +107,7 @@ class SessionsHistoryTool(AgentTool):
             return ToolResult(
                 success=True,
                 content=output,
-                metadata={
-                    "session_id": session_id,
-                    "count": len(messages)
-                }
+                metadata={"session_id": session_id, "count": len(messages)},
             )
 
         except Exception as e:
@@ -138,21 +128,15 @@ class SessionsSendTool(AgentTool):
         return {
             "type": "object",
             "properties": {
-                "session_id": {
-                    "type": "string",
-                    "description": "Target session ID"
-                },
-                "message": {
-                    "type": "string",
-                    "description": "Message content to send"
-                },
+                "session_id": {"type": "string", "description": "Target session ID"},
+                "message": {"type": "string", "description": "Message content to send"},
                 "from_session": {
                     "type": "string",
                     "description": "Source session ID",
-                    "default": "system"
-                }
+                    "default": "system",
+                },
             },
-            "required": ["session_id", "message"]
+            "required": ["session_id", "message"],
         }
 
     async def execute(self, params: dict[str, Any]) -> ToolResult:
@@ -162,16 +146,12 @@ class SessionsSendTool(AgentTool):
         from_session = params.get("from_session", "system")
 
         if not session_id or not message:
-            return ToolResult(
-                success=False,
-                content="",
-                error="session_id and message required"
-            )
+            return ToolResult(success=False, content="", error="session_id and message required")
 
         try:
             # Get target session
             session = self.session_manager.get_session(session_id)
-            
+
             # Add message as user message with metadata
             prefix = f"[From {from_session}] "
             session.add_user_message(prefix + message)
@@ -179,10 +159,7 @@ class SessionsSendTool(AgentTool):
             return ToolResult(
                 success=True,
                 content=f"Message sent to session '{session_id}'",
-                metadata={
-                    "session_id": session_id,
-                    "from_session": from_session
-                }
+                metadata={"session_id": session_id, "from_session": from_session},
             )
 
         except Exception as e:
@@ -205,14 +182,14 @@ class SessionsSpawnTool(AgentTool):
             "properties": {
                 "session_id": {
                     "type": "string",
-                    "description": "New session ID (optional, will generate if not provided)"
+                    "description": "New session ID (optional, will generate if not provided)",
                 },
                 "initial_message": {
                     "type": "string",
-                    "description": "Initial message to seed the session"
-                }
+                    "description": "Initial message to seed the session",
+                },
             },
-            "required": []
+            "required": [],
         }
 
     async def execute(self, params: dict[str, Any]) -> ToolResult:
@@ -223,7 +200,7 @@ class SessionsSpawnTool(AgentTool):
         try:
             # Create session
             session = self.session_manager.get_session(session_id)
-            
+
             # Add initial message if provided
             if initial_message:
                 session.add_user_message(initial_message)
@@ -231,10 +208,7 @@ class SessionsSpawnTool(AgentTool):
             return ToolResult(
                 success=True,
                 content=f"Created new session '{session_id}'",
-                metadata={
-                    "session_id": session_id,
-                    "has_initial_message": bool(initial_message)
-                }
+                metadata={"session_id": session_id, "has_initial_message": bool(initial_message)},
             )
 
         except Exception as e:

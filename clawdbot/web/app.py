@@ -2,16 +2,17 @@
 
 import logging
 from pathlib import Path
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from ..config import load_config
-from ..agents.session import SessionManager
-from ..channels.registry import get_channel_registry
 from ..agents.runtime import AgentRuntime
+from ..agents.session import SessionManager
 from ..agents.tools.registry import get_tool_registry
+from ..channels.registry import get_channel_registry
+from ..config import load_config
 
 logger = logging.getLogger(__name__)
 
@@ -33,19 +34,16 @@ async def index(request: Request):
     config = load_config()
     channel_registry = get_channel_registry()
 
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "config": config,
-        "channels": channel_registry.list_channels()
-    })
+    return templates.TemplateResponse(
+        "index.html",
+        {"request": request, "config": config, "channels": channel_registry.list_channels()},
+    )
 
 
 @app.get("/webchat", response_class=HTMLResponse)
 async def webchat(request: Request):
     """WebChat interface"""
-    return templates.TemplateResponse("webchat.html", {
-        "request": request
-    })
+    return templates.TemplateResponse("webchat.html", {"request": request})
 
 
 @app.get("/api/status")
@@ -56,18 +54,11 @@ async def api_status():
 
     return {
         "status": "ok",
-        "gateway": {
-            "port": config.gateway.port,
-            "bind": config.gateway.bind
-        },
+        "gateway": {"port": config.gateway.port, "bind": config.gateway.bind},
         "channels": [
-            {
-                "id": ch.id,
-                "label": ch.label,
-                "running": ch.is_running()
-            }
+            {"id": ch.id, "label": ch.label, "running": ch.is_running()}
             for ch in channel_registry.list_channels()
-        ]
+        ],
     }
 
 
@@ -79,8 +70,7 @@ async def api_sessions():
 
     return {
         "sessions": [
-            {"id": sid, "messageCount": 0}  # TODO: Get actual message count
-            for sid in session_ids
+            {"id": sid, "messageCount": 0} for sid in session_ids  # TODO: Get actual message count
         ]
     }
 
@@ -100,10 +90,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.send_json({"type": "pong"})
             elif data.get("type") == "chat":
                 # TODO: Handle chat message
-                await websocket.send_json({
-                    "type": "chat_response",
-                    "text": "Echo: " + data.get("text", "")
-                })
+                await websocket.send_json(
+                    {"type": "chat_response", "text": "Echo: " + data.get("text", "")}
+                )
 
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected")
@@ -115,9 +104,9 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.post("/v1/chat/completions")
 async def chat_completions(request: dict[str, Any]):
     """OpenAI-compatible Chat Completions API endpoint"""
-    from fastapi import Request as FastAPIRequest
-    from fastapi.responses import StreamingResponse
     import json
+
+    from fastapi.responses import StreamingResponse
 
     messages = request.get("messages", [])
     model = request.get("model", "claude-opus-4-5-20250514")
@@ -128,13 +117,13 @@ async def chat_completions(request: dict[str, Any]):
         return {"error": {"message": "messages required", "type": "invalid_request_error"}}
 
     try:
-        config = load_config()
+        load_config()
         runtime = AgentRuntime(model=model)
         session_manager = SessionManager()
-        
+
         # Create temporary session
         session = session_manager.get_session(f"api-{datetime.now().timestamp()}")
-        
+
         # Add messages to session
         for msg in messages:
             role = msg.get("role", "")
@@ -162,25 +151,19 @@ async def chat_completions(request: dict[str, Any]):
                                 "object": "chat.completion.chunk",
                                 "created": int(datetime.now().timestamp()),
                                 "model": model,
-                                "choices": [{
-                                    "index": 0,
-                                    "delta": {"content": text},
-                                    "finish_reason": None
-                                }]
+                                "choices": [
+                                    {"index": 0, "delta": {"content": text}, "finish_reason": None}
+                                ],
                             }
                             yield f"data: {json.dumps(chunk)}\n\n"
-                
+
                 # Final chunk
                 final_chunk = {
                     "id": f"chatcmpl-{int(datetime.now().timestamp())}",
                     "object": "chat.completion.chunk",
                     "created": int(datetime.now().timestamp()),
                     "model": model,
-                    "choices": [{
-                        "index": 0,
-                        "delta": {},
-                        "finish_reason": "stop"
-                    }]
+                    "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
                 }
                 yield f"data: {json.dumps(final_chunk)}\n\n"
                 yield "data: [DONE]\n\n"
@@ -200,29 +183,19 @@ async def chat_completions(request: dict[str, Any]):
                 "object": "chat.completion",
                 "created": int(datetime.now().timestamp()),
                 "model": model,
-                "choices": [{
-                    "index": 0,
-                    "message": {
-                        "role": "assistant",
-                        "content": accumulated
-                    },
-                    "finish_reason": "stop"
-                }],
-                "usage": {
-                    "prompt_tokens": 0,
-                    "completion_tokens": 0,
-                    "total_tokens": 0
-                }
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {"role": "assistant", "content": accumulated},
+                        "finish_reason": "stop",
+                    }
+                ],
+                "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
             }
 
     except Exception as e:
         logger.error(f"Chat completions error: {e}", exc_info=True)
-        return {
-            "error": {
-                "message": str(e),
-                "type": "server_error"
-            }
-        }
+        return {"error": {"message": str(e), "type": "server_error"}}
 
 
 # Tool invocation API
@@ -240,10 +213,7 @@ async def tools_invoke(request: dict[str, Any]):
         tool = tool_registry.get(tool_name)
 
         if not tool:
-            return {
-                "success": False,
-                "error": f"Tool '{tool_name}' not found"
-            }
+            return {"success": False, "error": f"Tool '{tool_name}' not found"}
 
         result = await tool.execute(params)
 
@@ -251,15 +221,12 @@ async def tools_invoke(request: dict[str, Any]):
             "success": result.success,
             "content": result.content,
             "error": result.error,
-            "metadata": result.metadata
+            "metadata": result.metadata,
         }
 
     except Exception as e:
         logger.error(f"Tool invocation error: {e}", exc_info=True)
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        return {"success": False, "error": str(e)}
 
 
 # Models list endpoint
@@ -271,23 +238,15 @@ async def api_models():
             {
                 "id": "anthropic/claude-opus-4-5-20250514",
                 "name": "Claude Opus 4.5",
-                "provider": "anthropic"
+                "provider": "anthropic",
             },
             {
                 "id": "anthropic/claude-3-5-sonnet-20241022",
                 "name": "Claude 3.5 Sonnet",
-                "provider": "anthropic"
+                "provider": "anthropic",
             },
-            {
-                "id": "openai/gpt-4",
-                "name": "GPT-4",
-                "provider": "openai"
-            },
-            {
-                "id": "openai/gpt-4-turbo",
-                "name": "GPT-4 Turbo",
-                "provider": "openai"
-            }
+            {"id": "openai/gpt-4", "name": "GPT-4", "provider": "openai"},
+            {"id": "openai/gpt-4-turbo", "name": "GPT-4 Turbo", "provider": "openai"},
         ]
     }
 
@@ -301,11 +260,7 @@ async def api_tools():
 
     return {
         "tools": [
-            {
-                "name": tool.name,
-                "description": tool.description,
-                "schema": tool.get_schema()
-            }
+            {"name": tool.name, "description": tool.description, "schema": tool.get_schema()}
             for tool in tools
         ]
     }

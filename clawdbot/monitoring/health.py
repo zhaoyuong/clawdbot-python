@@ -1,12 +1,15 @@
 """
 Health check system for ClawdBot
 """
+
 import asyncio
 import logging
-from enum import Enum
-from typing import Optional, Dict, Any, Callable, Awaitable, List
-from datetime import datetime
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any
+
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -14,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 class HealthStatus(str, Enum):
     """Health status levels"""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
@@ -23,13 +27,14 @@ class HealthStatus(str, Enum):
 @dataclass
 class ComponentHealth:
     """Health status of a single component"""
+
     name: str
     status: HealthStatus = HealthStatus.UNKNOWN
-    message: Optional[str] = None
-    last_check: Optional[datetime] = None
-    response_time_ms: Optional[float] = None
-    details: Dict[str, Any] = field(default_factory=dict)
-    
+    message: str | None = None
+    last_check: datetime | None = None
+    response_time_ms: float | None = None
+    details: dict[str, Any] = field(default_factory=dict)
+
     def to_dict(self) -> dict:
         """Convert to dictionary"""
         return {
@@ -38,95 +43,89 @@ class ComponentHealth:
             "message": self.message,
             "lastCheck": self.last_check.isoformat() if self.last_check else None,
             "responseTimeMs": self.response_time_ms,
-            "details": self.details
+            "details": self.details,
         }
 
 
 class HealthCheckResponse(BaseModel):
     """Health check API response"""
+
     status: str
     timestamp: str
     version: str = "0.3.1"
-    uptime_seconds: Optional[float] = None
-    components: Dict[str, dict] = {}
-    
+    uptime_seconds: float | None = None
+    components: dict[str, dict] = {}
+
     class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
+        json_encoders = {datetime: lambda v: v.isoformat()}
 
 
 class HealthCheck:
     """
     Centralized health check system
-    
+
     Example usage:
         health = HealthCheck()
-        
+
         # Register component checks
         health.register("database", db_check_func)
         health.register("redis", redis_check_func)
         health.register("agent", agent_check_func)
-        
+
         # Get overall health
         result = await health.check_all()
         print(result.status)  # "healthy", "degraded", or "unhealthy"
-        
+
         # Add to FastAPI
         @app.get("/health")
         async def health_endpoint():
             return await health.check_all()
     """
-    
+
     def __init__(self):
-        self._checks: Dict[str, Callable[[], Awaitable[ComponentHealth]]] = {}
+        self._checks: dict[str, Callable[[], Awaitable[ComponentHealth]]] = {}
         self._start_time = datetime.utcnow()
-        self._last_results: Dict[str, ComponentHealth] = {}
+        self._last_results: dict[str, ComponentHealth] = {}
         self._check_timeout = 10.0  # seconds
-    
+
     @property
     def uptime_seconds(self) -> float:
         """Get system uptime in seconds"""
         return (datetime.utcnow() - self._start_time).total_seconds()
-    
+
     def register(
-        self,
-        name: str,
-        check_fn: Callable[[], Awaitable[bool]],
-        critical: bool = True
+        self, name: str, check_fn: Callable[[], Awaitable[bool]], critical: bool = True
     ) -> None:
         """
         Register a health check
-        
+
         Args:
             name: Component name
             check_fn: Async function that returns True if healthy
             critical: If True, unhealthy status affects overall health
         """
+
         async def wrapper() -> ComponentHealth:
             start = datetime.utcnow()
             try:
-                result = await asyncio.wait_for(
-                    check_fn(),
-                    timeout=self._check_timeout
-                )
+                result = await asyncio.wait_for(check_fn(), timeout=self._check_timeout)
                 elapsed = (datetime.utcnow() - start).total_seconds() * 1000
-                
+
                 return ComponentHealth(
                     name=name,
                     status=HealthStatus.HEALTHY if result else HealthStatus.UNHEALTHY,
                     message="OK" if result else "Check failed",
                     last_check=datetime.utcnow(),
                     response_time_ms=elapsed,
-                    details={"critical": critical}
+                    details={"critical": critical},
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 return ComponentHealth(
                     name=name,
                     status=HealthStatus.UNHEALTHY,
                     message="Check timed out",
                     last_check=datetime.utcnow(),
-                    details={"critical": critical, "error": "timeout"}
+                    details={"critical": critical, "error": "timeout"},
                 )
             except Exception as e:
                 elapsed = (datetime.utcnow() - start).total_seconds() * 1000
@@ -136,31 +135,31 @@ class HealthCheck:
                     message=str(e),
                     last_check=datetime.utcnow(),
                     response_time_ms=elapsed,
-                    details={"critical": critical, "error": type(e).__name__}
+                    details={"critical": critical, "error": type(e).__name__},
                 )
-        
+
         self._checks[name] = wrapper
         logger.info(f"Registered health check: {name} (critical={critical})")
-    
+
     def unregister(self, name: str) -> None:
         """Unregister a health check"""
         if name in self._checks:
             del self._checks[name]
             logger.info(f"Unregistered health check: {name}")
-    
-    async def check_component(self, name: str) -> Optional[ComponentHealth]:
+
+    async def check_component(self, name: str) -> ComponentHealth | None:
         """Check a single component"""
         if name not in self._checks:
             return None
-        
+
         result = await self._checks[name]()
         self._last_results[name] = result
         return result
-    
+
     async def check_all(self) -> HealthCheckResponse:
         """
         Run all health checks
-        
+
         Returns:
             HealthCheckResponse with overall status and component details
         """
@@ -169,38 +168,35 @@ class HealthCheck:
                 status=HealthStatus.HEALTHY.value,
                 timestamp=datetime.utcnow().isoformat(),
                 uptime_seconds=self.uptime_seconds,
-                components={}
+                components={},
             )
-        
+
         # Run all checks concurrently
-        tasks = [
-            self._checks[name]()
-            for name in self._checks
-        ]
+        tasks = [self._checks[name]() for name in self._checks]
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         # Process results
         components = {}
         has_critical_failure = False
         has_non_critical_failure = False
-        
+
         for i, name in enumerate(self._checks.keys()):
             result = results[i]
-            
+
             if isinstance(result, Exception):
                 health = ComponentHealth(
                     name=name,
                     status=HealthStatus.UNHEALTHY,
                     message=str(result),
                     last_check=datetime.utcnow(),
-                    details={"error": type(result).__name__}
+                    details={"error": type(result).__name__},
                 )
             else:
                 health = result
-            
+
             components[name] = health.to_dict()
             self._last_results[name] = health
-            
+
             # Check if critical
             is_critical = health.details.get("critical", True)
             if health.status == HealthStatus.UNHEALTHY:
@@ -208,7 +204,7 @@ class HealthCheck:
                     has_critical_failure = True
                 else:
                     has_non_critical_failure = True
-        
+
         # Determine overall status
         if has_critical_failure:
             overall_status = HealthStatus.UNHEALTHY
@@ -216,30 +212,30 @@ class HealthCheck:
             overall_status = HealthStatus.DEGRADED
         else:
             overall_status = HealthStatus.HEALTHY
-        
+
         return HealthCheckResponse(
             status=overall_status.value,
             timestamp=datetime.utcnow().isoformat(),
             uptime_seconds=self.uptime_seconds,
-            components=components
+            components=components,
         )
-    
-    def get_last_results(self) -> Dict[str, ComponentHealth]:
+
+    def get_last_results(self) -> dict[str, ComponentHealth]:
         """Get last check results without running checks"""
         return self._last_results.copy()
-    
+
     async def liveness(self) -> bool:
         """
         Simple liveness check (is the service running?)
-        
+
         Use for Kubernetes liveness probe
         """
         return True
-    
+
     async def readiness(self) -> bool:
         """
         Readiness check (is the service ready to handle requests?)
-        
+
         Use for Kubernetes readiness probe
         """
         result = await self.check_all()
@@ -247,7 +243,7 @@ class HealthCheck:
 
 
 # Global health check instance
-_health_check: Optional[HealthCheck] = None
+_health_check: HealthCheck | None = None
 
 
 def get_health_check() -> HealthCheck:
@@ -259,9 +255,7 @@ def get_health_check() -> HealthCheck:
 
 
 def register_health_check(
-    name: str,
-    check_fn: Callable[[], Awaitable[bool]],
-    critical: bool = True
+    name: str, check_fn: Callable[[], Awaitable[bool]], critical: bool = True
 ) -> None:
     """Register a health check with global instance"""
     get_health_check().register(name, check_fn, critical)

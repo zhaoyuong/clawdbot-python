@@ -1,21 +1,22 @@
 """
 Agent module for ClawdBot
 """
-from .runtime import AgentRuntime, AgentEvent
-from .session import Session, SessionManager, Message
+
 from .context import ContextManager, ContextWindow
 from .errors import (
     AgentError,
-    ContextOverflowError,
-    RateLimitError,
     AuthenticationError,
-    NetworkError,
-    TimeoutError,
+    ContextOverflowError,
     ErrorRecovery,
+    NetworkError,
+    RateLimitError,
+    TimeoutError,
     classify_error,
+    format_error_message,
     is_retryable_error,
-    format_error_message
 )
+from .runtime import AgentEvent, AgentRuntime
+from .session import Message, Session, SessionManager
 
 __all__ = [
     # Runtime

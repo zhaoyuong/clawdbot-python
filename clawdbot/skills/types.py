@@ -1,6 +1,5 @@
 """Skill types and structures"""
 
-from typing import Any, Optional
 from pydantic import BaseModel
 
 
@@ -8,14 +7,14 @@ class SkillMetadata(BaseModel):
     """Skill metadata from frontmatter"""
 
     name: str
-    description: Optional[str] = None
-    version: Optional[str] = None
-    author: Optional[str] = None
+    description: str | None = None
+    version: str | None = None
+    author: str | None = None
     tags: list[str] = []
     requires_bins: list[str] = []
     requires_env: list[str] = []
     requires_config: list[str] = []
-    os: Optional[list[str]] = None  # ["darwin", "linux", "windows"]
+    os: list[str] | None = None  # ["darwin", "linux", "windows"]
 
 
 class Skill(BaseModel):

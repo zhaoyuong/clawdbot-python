@@ -1,12 +1,12 @@
 """iMessage channel implementation for macOS"""
 
 import logging
-from typing import Any, Optional
-from datetime import datetime
-import subprocess
 import platform
+import subprocess
+from datetime import datetime
+from typing import Any
 
-from .base import ChannelPlugin, ChannelCapabilities, InboundMessage
+from .base import ChannelCapabilities, ChannelPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ class iMessageChannel(ChannelPlugin):
             supports_media=True,
             supports_reactions=True,
             supports_threads=False,
-            supports_polls=False
+            supports_polls=False,
         )
         self._is_macos = platform.system() == "Darwin"
 
@@ -40,9 +40,9 @@ class iMessageChannel(ChannelPlugin):
                 ["osascript", "-e", 'tell application "Messages" to get name'],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
             )
-            
+
             if result.returncode == 0:
                 logger.info("Messages.app accessible")
                 self._running = True
@@ -63,7 +63,7 @@ class iMessageChannel(ChannelPlugin):
         logger.info("Stopping iMessage channel...")
         self._running = False
 
-    async def send_text(self, target: str, text: str, reply_to: Optional[str] = None) -> str:
+    async def send_text(self, target: str, text: str, reply_to: str | None = None) -> str:
         """Send text message via iMessage"""
         if not self._running:
             raise RuntimeError("iMessage channel not started")
@@ -71,23 +71,20 @@ class iMessageChannel(ChannelPlugin):
         try:
             # Escape quotes in text
             escaped_text = text.replace('"', '\\"').replace("'", "\\'")
-            
+
             # AppleScript to send message
-            script = f'''
+            script = f"""
             tell application "Messages"
                 set targetService to 1st service whose service type = iMessage
                 set targetBuddy to buddy "{target}" of targetService
                 send "{escaped_text}" to targetBuddy
             end tell
-            '''
-            
+            """
+
             result = subprocess.run(
-                ["osascript", "-e", script],
-                capture_output=True,
-                text=True,
-                timeout=10
+                ["osascript", "-e", script], capture_output=True, text=True, timeout=10
             )
-            
+
             if result.returncode == 0:
                 message_id = f"imsg-{int(datetime.utcnow().timestamp()*1000)}"
                 logger.info(f"Sent iMessage to {target}")
@@ -101,11 +98,7 @@ class iMessageChannel(ChannelPlugin):
             raise
 
     async def send_media(
-        self,
-        target: str,
-        media_url: str,
-        media_type: str,
-        caption: Optional[str] = None
+        self, target: str, media_url: str, media_type: str, caption: str | None = None
     ) -> str:
         """Send media message (limited support)"""
         if not self._running:

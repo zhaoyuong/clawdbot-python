@@ -1,8 +1,8 @@
 """Browser automation tool using Playwright"""
 
-import logging
-from typing import Any, Optional
 import asyncio
+import logging
+from typing import Any
 
 from .base import AgentTool, ToolResult
 
@@ -26,40 +26,42 @@ class BrowserTool(AgentTool):
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["start", "stop", "open", "navigate", "screenshot", "click", "type", "eval", "pdf", "close"],
-                    "description": "Browser action to perform"
+                    "enum": [
+                        "start",
+                        "stop",
+                        "open",
+                        "navigate",
+                        "screenshot",
+                        "click",
+                        "type",
+                        "eval",
+                        "pdf",
+                        "close",
+                    ],
+                    "description": "Browser action to perform",
                 },
-                "url": {
-                    "type": "string",
-                    "description": "URL to navigate to (for open/navigate)"
-                },
+                "url": {"type": "string", "description": "URL to navigate to (for open/navigate)"},
                 "page_id": {
                     "type": "string",
-                    "description": "Page identifier (optional, uses default if not provided)"
+                    "description": "Page identifier (optional, uses default if not provided)",
                 },
                 "selector": {
                     "type": "string",
-                    "description": "CSS selector for element (for click/type)"
+                    "description": "CSS selector for element (for click/type)",
                 },
-                "text": {
-                    "type": "string",
-                    "description": "Text to type (for type action)"
-                },
+                "text": {"type": "string", "description": "Text to type (for type action)"},
                 "code": {
                     "type": "string",
-                    "description": "JavaScript code to evaluate (for eval action)"
+                    "description": "JavaScript code to evaluate (for eval action)",
                 },
-                "path": {
-                    "type": "string",
-                    "description": "File path to save screenshot/PDF"
-                },
+                "path": {"type": "string", "description": "File path to save screenshot/PDF"},
                 "wait": {
                     "type": "integer",
                     "description": "Wait time in milliseconds before action",
-                    "default": 0
-                }
+                    "default": 0,
+                },
             },
-            "required": ["action"]
+            "required": ["action"],
         }
 
     async def execute(self, params: dict[str, Any]) -> ToolResult:
@@ -91,11 +93,7 @@ class BrowserTool(AgentTool):
             elif action == "close":
                 return await self._close_page(params)
             else:
-                return ToolResult(
-                    success=False,
-                    content="",
-                    error=f"Unknown action: {action}"
-                )
+                return ToolResult(success=False, content="", error=f"Unknown action: {action}")
 
         except Exception as e:
             logger.error(f"Browser tool error: {e}", exc_info=True)
@@ -107,44 +105,32 @@ class BrowserTool(AgentTool):
             from playwright.async_api import async_playwright
 
             if self._browser:
-                return ToolResult(
-                    success=True,
-                    content="Browser already running"
-                )
+                return ToolResult(success=True, content="Browser already running")
 
             playwright = await async_playwright().start()
             self._browser = await playwright.chromium.launch(headless=True)
             self._context = await self._browser.new_context()
 
-            return ToolResult(
-                success=True,
-                content="Browser started"
-            )
+            return ToolResult(success=True, content="Browser started")
 
         except ImportError:
             return ToolResult(
                 success=False,
                 content="",
-                error="Playwright not installed. Install with: pip install playwright && playwright install"
+                error="Playwright not installed. Install with: pip install playwright && playwright install",
             )
 
     async def _stop_browser(self) -> ToolResult:
         """Stop browser"""
         if not self._browser:
-            return ToolResult(
-                success=True,
-                content="Browser not running"
-            )
+            return ToolResult(success=True, content="Browser not running")
 
         await self._browser.close()
         self._browser = None
         self._context = None
         self._pages.clear()
 
-        return ToolResult(
-            success=True,
-            content="Browser stopped"
-        )
+        return ToolResult(success=True, content="Browser stopped")
 
     async def _open_page(self, params: dict[str, Any]) -> ToolResult:
         """Open new page"""
@@ -162,9 +148,7 @@ class BrowserTool(AgentTool):
         self._pages[page_id] = page
 
         return ToolResult(
-            success=True,
-            content=f"Opened {url}",
-            metadata={"page_id": page_id, "url": url}
+            success=True, content=f"Opened {url}", metadata={"page_id": page_id, "url": url}
         )
 
     async def _navigate(self, params: dict[str, Any]) -> ToolResult:
@@ -177,18 +161,11 @@ class BrowserTool(AgentTool):
 
         page = self._pages.get(page_id)
         if not page:
-            return ToolResult(
-                success=False,
-                content="",
-                error=f"Page '{page_id}' not found"
-            )
+            return ToolResult(success=False, content="", error=f"Page '{page_id}' not found")
 
         await page.goto(url)
 
-        return ToolResult(
-            success=True,
-            content=f"Navigated to {url}"
-        )
+        return ToolResult(success=True, content=f"Navigated to {url}")
 
     async def _screenshot(self, params: dict[str, Any]) -> ToolResult:
         """Take screenshot"""
@@ -197,18 +174,12 @@ class BrowserTool(AgentTool):
 
         page = self._pages.get(page_id)
         if not page:
-            return ToolResult(
-                success=False,
-                content="",
-                error=f"Page '{page_id}' not found"
-            )
+            return ToolResult(success=False, content="", error=f"Page '{page_id}' not found")
 
         await page.screenshot(path=path)
 
         return ToolResult(
-            success=True,
-            content=f"Screenshot saved to {path}",
-            metadata={"path": path}
+            success=True, content=f"Screenshot saved to {path}", metadata={"path": path}
         )
 
     async def _click(self, params: dict[str, Any]) -> ToolResult:
@@ -222,21 +193,14 @@ class BrowserTool(AgentTool):
 
         page = self._pages.get(page_id)
         if not page:
-            return ToolResult(
-                success=False,
-                content="",
-                error=f"Page '{page_id}' not found"
-            )
+            return ToolResult(success=False, content="", error=f"Page '{page_id}' not found")
 
         if wait > 0:
             await asyncio.sleep(wait / 1000)
 
         await page.click(selector)
 
-        return ToolResult(
-            success=True,
-            content=f"Clicked {selector}"
-        )
+        return ToolResult(success=True, content=f"Clicked {selector}")
 
     async def _type_text(self, params: dict[str, Any]) -> ToolResult:
         """Type text into element"""
@@ -245,26 +209,15 @@ class BrowserTool(AgentTool):
         text = params.get("text", "")
 
         if not selector or not text:
-            return ToolResult(
-                success=False,
-                content="",
-                error="selector and text required"
-            )
+            return ToolResult(success=False, content="", error="selector and text required")
 
         page = self._pages.get(page_id)
         if not page:
-            return ToolResult(
-                success=False,
-                content="",
-                error=f"Page '{page_id}' not found"
-            )
+            return ToolResult(success=False, content="", error=f"Page '{page_id}' not found")
 
         await page.fill(selector, text)
 
-        return ToolResult(
-            success=True,
-            content=f"Typed '{text}' into {selector}"
-        )
+        return ToolResult(success=True, content=f"Typed '{text}' into {selector}")
 
     async def _eval(self, params: dict[str, Any]) -> ToolResult:
         """Evaluate JavaScript"""
@@ -276,19 +229,11 @@ class BrowserTool(AgentTool):
 
         page = self._pages.get(page_id)
         if not page:
-            return ToolResult(
-                success=False,
-                content="",
-                error=f"Page '{page_id}' not found"
-            )
+            return ToolResult(success=False, content="", error=f"Page '{page_id}' not found")
 
         result = await page.evaluate(code)
 
-        return ToolResult(
-            success=True,
-            content=str(result),
-            metadata={"result": result}
-        )
+        return ToolResult(success=True, content=str(result), metadata={"result": result})
 
     async def _generate_pdf(self, params: dict[str, Any]) -> ToolResult:
         """Generate PDF"""
@@ -297,19 +242,11 @@ class BrowserTool(AgentTool):
 
         page = self._pages.get(page_id)
         if not page:
-            return ToolResult(
-                success=False,
-                content="",
-                error=f"Page '{page_id}' not found"
-            )
+            return ToolResult(success=False, content="", error=f"Page '{page_id}' not found")
 
         await page.pdf(path=path)
 
-        return ToolResult(
-            success=True,
-            content=f"PDF saved to {path}",
-            metadata={"path": path}
-        )
+        return ToolResult(success=True, content=f"PDF saved to {path}", metadata={"path": path})
 
     async def _close_page(self, params: dict[str, Any]) -> ToolResult:
         """Close page"""
@@ -317,16 +254,9 @@ class BrowserTool(AgentTool):
 
         page = self._pages.get(page_id)
         if not page:
-            return ToolResult(
-                success=False,
-                content="",
-                error=f"Page '{page_id}' not found"
-            )
+            return ToolResult(success=False, content="", error=f"Page '{page_id}' not found")
 
         await page.close()
         del self._pages[page_id]
 
-        return ToolResult(
-            success=True,
-            content=f"Closed page '{page_id}'"
-        )
+        return ToolResult(success=True, content=f"Closed page '{page_id}'")

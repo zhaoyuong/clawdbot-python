@@ -1,6 +1,7 @@
 """Gateway management commands"""
 
 import asyncio
+
 import typer
 from rich.console import Console
 
@@ -14,13 +15,13 @@ def start() -> None:
     console.print("[cyan]Starting Gateway server...[/cyan]")
 
     try:
-        from ..config import load_config
-        from ..gateway.server import GatewayServer
         import logging
 
+        from ..config import load_config
+        from ..gateway.server import GatewayServer
+
         logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
 
         config = load_config()

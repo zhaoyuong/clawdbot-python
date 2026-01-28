@@ -1,10 +1,10 @@
 """Skills loader"""
 
+import logging
 import os
 import re
-import logging
 from pathlib import Path
-from typing import Optional
+
 import yaml
 
 from .types import Skill, SkillMetadata
@@ -40,10 +40,10 @@ class SkillLoader:
         logger.info(f"Loaded {len(skills)} skills from {directory} ({source})")
         return skills
 
-    def _load_skill_file(self, file_path: Path, source: str) -> Optional[Skill]:
+    def _load_skill_file(self, file_path: Path, source: str) -> Skill | None:
         """Load a single skill file"""
         try:
-            content = file_path.read_text(encoding='utf-8')
+            content = file_path.read_text(encoding="utf-8")
 
             # Parse frontmatter
             metadata = self._parse_frontmatter(content)
@@ -62,17 +62,17 @@ class SkillLoader:
                 content=skill_content,
                 metadata=SkillMetadata(**metadata),
                 source=source,
-                path=str(file_path)
+                path=str(file_path),
             )
 
         except Exception as e:
             logger.error(f"Error loading skill {file_path}: {e}", exc_info=True)
             return None
 
-    def _parse_frontmatter(self, content: str) -> Optional[dict]:
+    def _parse_frontmatter(self, content: str) -> dict | None:
         """Parse YAML frontmatter from skill file"""
         # Match frontmatter between --- markers
-        match = re.match(r'^---\s*\n(.*?)\n---\s*\n', content, re.DOTALL)
+        match = re.match(r"^---\s*\n(.*?)\n---\s*\n", content, re.DOTALL)
 
         if not match:
             return None
@@ -88,10 +88,10 @@ class SkillLoader:
     def _extract_content(self, content: str) -> str:
         """Extract skill content (without frontmatter)"""
         # Remove frontmatter
-        content = re.sub(r'^---\s*\n.*?\n---\s*\n', '', content, count=1, flags=re.DOTALL)
+        content = re.sub(r"^---\s*\n.*?\n---\s*\n", "", content, count=1, flags=re.DOTALL)
         return content.strip()
 
-    def check_eligibility(self, skill: Skill) -> tuple[bool, Optional[str]]:
+    def check_eligibility(self, skill: Skill) -> tuple[bool, str | None]:
         """Check if a skill is eligible to run"""
         # Check OS requirements
         if skill.metadata.os:
@@ -118,6 +118,7 @@ class SkillLoader:
     def _check_binary_exists(self, binary: str) -> bool:
         """Check if a binary exists in PATH"""
         from shutil import which
+
         return which(binary) is not None
 
     def load_all_skills(self) -> dict[str, Skill]:

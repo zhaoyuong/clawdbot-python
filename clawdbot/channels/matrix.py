@@ -1,10 +1,10 @@
 """Matrix channel implementation"""
 
 import logging
-from typing import Any, Optional
 from datetime import datetime
+from typing import Any
 
-from .base import ChannelPlugin, ChannelCapabilities, InboundMessage
+from .base import ChannelCapabilities, ChannelPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -21,11 +21,11 @@ class MatrixChannel(ChannelPlugin):
             supports_media=True,
             supports_reactions=True,
             supports_threads=False,
-            supports_polls=False
+            supports_polls=False,
         )
         self._client = None
-        self._homeserver: Optional[str] = None
-        self._user_id: Optional[str] = None
+        self._homeserver: str | None = None
+        self._user_id: str | None = None
 
     async def start(self, config: dict[str, Any]) -> None:
         """Start Matrix client"""
@@ -49,14 +49,14 @@ class MatrixChannel(ChannelPlugin):
                 self._client.access_token = access_token
             elif password:
                 response = await self._client.login(password)
-                if not response or hasattr(response, 'message'):
+                if not response or hasattr(response, "message"):
                     raise RuntimeError(f"Matrix login failed: {response}")
             else:
                 raise ValueError("Matrix password or access_token required")
 
             # Start syncing
             # TODO: Add message callback and sync loop
-            
+
             self._running = True
             logger.info("Matrix channel started")
 
@@ -74,7 +74,7 @@ class MatrixChannel(ChannelPlugin):
             await self._client.close()
             self._running = False
 
-    async def send_text(self, target: str, text: str, reply_to: Optional[str] = None) -> str:
+    async def send_text(self, target: str, text: str, reply_to: str | None = None) -> str:
         """Send text message"""
         if not self._client or not self._running:
             raise RuntimeError("Matrix channel not started")
@@ -84,13 +84,10 @@ class MatrixChannel(ChannelPlugin):
             response = await self._client.room_send(
                 room_id=target,
                 message_type="m.room.message",
-                content={
-                    "msgtype": "m.text",
-                    "body": text
-                }
+                content={"msgtype": "m.text", "body": text},
             )
 
-            if hasattr(response, 'event_id'):
+            if hasattr(response, "event_id"):
                 return response.event_id
             else:
                 raise RuntimeError("Failed to send Matrix message")
@@ -100,11 +97,7 @@ class MatrixChannel(ChannelPlugin):
             raise
 
     async def send_media(
-        self,
-        target: str,
-        media_url: str,
-        media_type: str,
-        caption: Optional[str] = None
+        self, target: str, media_url: str, media_type: str, caption: str | None = None
     ) -> str:
         """Send media message"""
         if not self._client or not self._running:

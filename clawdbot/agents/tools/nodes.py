@@ -2,9 +2,6 @@
 
 import logging
 from typing import Any
-from datetime import datetime
-import base64
-from pathlib import Path
 
 from .base import AgentTool, ToolResult
 
@@ -17,7 +14,9 @@ class NodesTool(AgentTool):
     def __init__(self):
         super().__init__()
         self.name = "nodes"
-        self.description = "Control connected devices for camera, screen recording, location, and notifications"
+        self.description = (
+            "Control connected devices for camera, screen recording, location, and notifications"
+        )
         self._paired_nodes: dict[str, Any] = {}
 
     def get_schema(self) -> dict[str, Any]:
@@ -27,44 +26,44 @@ class NodesTool(AgentTool):
                 "action": {
                     "type": "string",
                     "enum": [
-                        "status", "list", "describe",
-                        "camera_snap", "camera_list", "camera_clip",
-                        "screen_record", "location_get",
-                        "notify", "run"
+                        "status",
+                        "list",
+                        "describe",
+                        "camera_snap",
+                        "camera_list",
+                        "camera_clip",
+                        "screen_record",
+                        "location_get",
+                        "notify",
+                        "run",
                     ],
-                    "description": "Node action to perform"
+                    "description": "Node action to perform",
                 },
                 "node_id": {
                     "type": "string",
-                    "description": "Node identifier (optional, uses default)"
+                    "description": "Node identifier (optional, uses default)",
                 },
                 "message": {
                     "type": "string",
-                    "description": "Notification message (for notify action)"
+                    "description": "Notification message (for notify action)",
                 },
-                "title": {
-                    "type": "string",
-                    "description": "Notification title"
-                },
+                "title": {"type": "string", "description": "Notification title"},
                 "camera_id": {
                     "type": "string",
-                    "description": "Camera identifier (for camera actions)"
+                    "description": "Camera identifier (for camera actions)",
                 },
                 "duration": {
                     "type": "integer",
                     "description": "Recording duration in seconds",
-                    "default": 10
+                    "default": 10,
                 },
-                "output_path": {
-                    "type": "string",
-                    "description": "Output file path for media"
-                },
+                "output_path": {"type": "string", "description": "Output file path for media"},
                 "command": {
                     "type": "string",
-                    "description": "System command to run (for run action)"
-                }
+                    "description": "System command to run (for run action)",
+                },
             },
-            "required": ["action"]
+            "required": ["action"],
         }
 
     async def execute(self, params: dict[str, Any]) -> ToolResult:
@@ -94,11 +93,7 @@ class NodesTool(AgentTool):
             elif action == "run":
                 return await self._run_command(params)
             else:
-                return ToolResult(
-                    success=False,
-                    content="",
-                    error=f"Unknown action: {action}"
-                )
+                return ToolResult(success=False, content="", error=f"Unknown action: {action}")
 
         except Exception as e:
             logger.error(f"Nodes tool error: {e}", exc_info=True)
@@ -107,21 +102,13 @@ class NodesTool(AgentTool):
     async def _status(self, params: dict[str, Any]) -> ToolResult:
         """Get nodes status"""
         if not self._paired_nodes:
-            return ToolResult(
-                success=True,
-                content="No nodes paired",
-                metadata={"count": 0}
-            )
+            return ToolResult(success=True, content="No nodes paired", metadata={"count": 0})
 
         output = f"Paired nodes ({len(self._paired_nodes)}):\n\n"
         for node_id, node_info in self._paired_nodes.items():
             output += f"- **{node_id}**: {node_info.get('platform', 'unknown')}\n"
 
-        return ToolResult(
-            success=True,
-            content=output,
-            metadata={"count": len(self._paired_nodes)}
-        )
+        return ToolResult(success=True, content=output, metadata={"count": len(self._paired_nodes)})
 
     async def _list_nodes(self, params: dict[str, Any]) -> ToolResult:
         """List paired nodes"""
@@ -135,82 +122,70 @@ class NodesTool(AgentTool):
             return ToolResult(
                 success=False,
                 content="",
-                error=f"Node '{node_id}' not found. Use action='list' to see available nodes."
+                error=f"Node '{node_id}' not found. Use action='list' to see available nodes.",
             )
 
         node_info = self._paired_nodes[node_id]
-        
+
         output = f"Node '{node_id}':\n"
         output += f"  Platform: {node_info.get('platform', 'unknown')}\n"
         output += f"  Capabilities: {', '.join(node_info.get('capabilities', []))}\n"
 
-        return ToolResult(
-            success=True,
-            content=output,
-            metadata=node_info
-        )
+        return ToolResult(success=True, content=output, metadata=node_info)
 
     async def _camera_snap(self, params: dict[str, Any]) -> ToolResult:
         """Take camera snapshot"""
-        output_path = params.get("output_path", "snapshot.jpg")
-        camera_id = params.get("camera_id", "0")
+        params.get("output_path", "snapshot.jpg")
+        params.get("camera_id", "0")
 
         # This would require iOS/Android node integration
         logger.warning("camera_snap requires paired mobile device")
-        
+
         return ToolResult(
             success=False,
             content="",
-            error="Camera snap requires paired iOS/Android node. This feature needs native app integration."
+            error="Camera snap requires paired iOS/Android node. This feature needs native app integration.",
         )
 
     async def _camera_list(self, params: dict[str, Any]) -> ToolResult:
         """List available cameras"""
         logger.warning("camera_list requires paired mobile device")
-        
+
         return ToolResult(
-            success=False,
-            content="",
-            error="Camera list requires paired iOS/Android node"
+            success=False, content="", error="Camera list requires paired iOS/Android node"
         )
 
     async def _screen_record(self, params: dict[str, Any]) -> ToolResult:
         """Record screen"""
-        duration = params.get("duration", 10)
-        output_path = params.get("output_path", "recording.mp4")
+        params.get("duration", 10)
+        params.get("output_path", "recording.mp4")
 
         logger.warning("screen_record requires paired mobile device")
-        
+
         return ToolResult(
-            success=False,
-            content="",
-            error="Screen recording requires paired iOS/Android node"
+            success=False, content="", error="Screen recording requires paired iOS/Android node"
         )
 
     async def _location_get(self, params: dict[str, Any]) -> ToolResult:
         """Get device location"""
         logger.warning("location_get requires paired mobile device")
-        
+
         return ToolResult(
-            success=False,
-            content="",
-            error="Location requires paired iOS/Android node"
+            success=False, content="", error="Location requires paired iOS/Android node"
         )
 
     async def _notify(self, params: dict[str, Any]) -> ToolResult:
         """Send notification to device"""
         message = params.get("message", "")
-        title = params.get("title", "ClawdBot")
+        params.get("title", "ClawdBot")
 
         if not message:
             return ToolResult(success=False, content="", error="message required")
 
         logger.warning("notify requires paired mobile device")
-        
+
         return ToolResult(
-            success=False,
-            content="",
-            error="Notifications require paired iOS/Android node"
+            success=False, content="", error="Notifications require paired iOS/Android node"
         )
 
     async def _run_command(self, params: dict[str, Any]) -> ToolResult:
@@ -221,11 +196,9 @@ class NodesTool(AgentTool):
             return ToolResult(success=False, content="", error="command required")
 
         logger.warning("run command requires paired mobile device")
-        
+
         return ToolResult(
-            success=False,
-            content="",
-            error="System.run requires paired iOS/Android node"
+            success=False, content="", error="System.run requires paired iOS/Android node"
         )
 
 

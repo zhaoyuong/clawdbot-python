@@ -1,7 +1,7 @@
 """teams channel plugin"""
 
-from clawdbot.channels.teams import TeamsChannel
 from clawdbot.channels.registry import get_channel_registry
+from clawdbot.channels.teams import TeamsChannel
 
 
 def register(api):

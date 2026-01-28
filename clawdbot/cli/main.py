@@ -5,14 +5,12 @@ from rich.console import Console
 from rich.table import Table
 
 from ..config import load_config
-from .gateway_cmd import gateway_app
 from .agent_cmd import agent_app
 from .channels_cmd import channels_app
+from .gateway_cmd import gateway_app
 
 app = typer.Typer(
-    name="clawdbot",
-    help="ClawdBot - Personal AI Assistant Platform",
-    no_args_is_help=True
+    name="clawdbot", help="ClawdBot - Personal AI Assistant Platform", no_args_is_help=True
 )
 
 console = Console()
@@ -35,18 +33,14 @@ def status() -> None:
 
     # Gateway status
     table.add_row(
-        "Gateway",
-        "Configured",
-        f"Port: {config.gateway.port}, Bind: {config.gateway.bind}"
+        "Gateway", "Configured", f"Port: {config.gateway.port}, Bind: {config.gateway.bind}"
     )
 
     # Agent status
-    agent_model = config.agent.model if isinstance(config.agent.model, str) else config.agent.model.primary
-    table.add_row(
-        "Agent",
-        "Configured",
-        f"Model: {agent_model}"
+    agent_model = (
+        config.agent.model if isinstance(config.agent.model, str) else config.agent.model.primary
     )
+    table.add_row("Agent", "Configured", f"Model: {agent_model}")
 
     # Channels status
     channels_enabled = []
@@ -60,7 +54,7 @@ def status() -> None:
     table.add_row(
         "Channels",
         "Configured",
-        f"Enabled: {', '.join(channels_enabled) if channels_enabled else 'None'}"
+        f"Enabled: {', '.join(channels_enabled) if channels_enabled else 'None'}",
     )
 
     console.print(table)
@@ -95,10 +89,11 @@ def onboard() -> None:
 
     # Save config
     from ..config.loader import save_config
+
     save_config(config)
 
     console.print("\n[green]✓ Configuration saved![/green]")
-    console.print(f"\nNext steps:")
+    console.print("\nNext steps:")
     console.print("1. Start the gateway: [cyan]clawdbot gateway start[/cyan]")
     console.print("2. Configure channels: [cyan]clawdbot channels login telegram[/cyan]")
     console.print("3. Run agent: [cyan]clawdbot agent run 'Hello!'[/cyan]")
@@ -113,28 +108,28 @@ def doctor() -> None:
 
     # Check config
     try:
-        config = load_config()
+        load_config()
         checks.append(("Configuration", True, "Config loaded successfully"))
     except Exception as e:
         checks.append(("Configuration", False, f"Error: {e}"))
 
     # Check Python version
     import sys
+
     py_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    if sys.version_info >= (3, 11):
-        checks.append(("Python Version", True, f"Python {py_version}"))
-    else:
-        checks.append(("Python Version", False, f"Python {py_version} (requires 3.11+)"))
+    checks.append(("Python Version", True, f"Python {py_version}"))
 
     # Check dependencies
     try:
         import anthropic
+
         checks.append(("Anthropic SDK", True, "Installed"))
     except ImportError:
         checks.append(("Anthropic SDK", False, "Not installed"))
 
     try:
         import websockets
+
         checks.append(("WebSockets", True, "Installed"))
     except ImportError:
         checks.append(("WebSockets", False, "Not installed"))

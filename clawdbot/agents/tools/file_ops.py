@@ -20,13 +20,8 @@ class ReadFileTool(AgentTool):
     def get_schema(self) -> dict[str, Any]:
         return {
             "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "Path to the file to read"
-                }
-            },
-            "required": ["path"]
+            "properties": {"path": {"type": "string", "description": "Path to the file to read"}},
+            "required": ["path"],
         }
 
     async def execute(self, params: dict[str, Any]) -> ToolResult:
@@ -38,14 +33,14 @@ class ReadFileTool(AgentTool):
 
         try:
             path = Path(file_path).expanduser()
-            
+
             if not path.exists():
                 return ToolResult(success=False, content="", error=f"File not found: {file_path}")
 
             if not path.is_file():
                 return ToolResult(success=False, content="", error=f"Not a file: {file_path}")
 
-            content = path.read_text(encoding='utf-8')
+            content = path.read_text(encoding="utf-8")
             return ToolResult(success=True, content=content)
 
         except Exception as e:
@@ -65,16 +60,10 @@ class WriteFileTool(AgentTool):
         return {
             "type": "object",
             "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "Path to the file to write"
-                },
-                "content": {
-                    "type": "string",
-                    "description": "Content to write to the file"
-                }
+                "path": {"type": "string", "description": "Path to the file to write"},
+                "content": {"type": "string", "description": "Content to write to the file"},
             },
-            "required": ["path", "content"]
+            "required": ["path", "content"],
         }
 
     async def execute(self, params: dict[str, Any]) -> ToolResult:
@@ -87,17 +76,14 @@ class WriteFileTool(AgentTool):
 
         try:
             path = Path(file_path).expanduser()
-            
+
             # Create parent directories
             path.parent.mkdir(parents=True, exist_ok=True)
 
             # Write file
-            path.write_text(content, encoding='utf-8')
+            path.write_text(content, encoding="utf-8")
 
-            return ToolResult(
-                success=True,
-                content=f"Wrote {len(content)} bytes to {file_path}"
-            )
+            return ToolResult(success=True, content=f"Wrote {len(content)} bytes to {file_path}")
 
         except Exception as e:
             logger.error(f"Write file error: {e}", exc_info=True)
@@ -116,20 +102,11 @@ class EditFileTool(AgentTool):
         return {
             "type": "object",
             "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "Path to the file to edit"
-                },
-                "old_text": {
-                    "type": "string",
-                    "description": "Text to search for"
-                },
-                "new_text": {
-                    "type": "string",
-                    "description": "Text to replace with"
-                }
+                "path": {"type": "string", "description": "Path to the file to edit"},
+                "old_text": {"type": "string", "description": "Text to search for"},
+                "new_text": {"type": "string", "description": "Text to replace with"},
             },
-            "required": ["path", "old_text", "new_text"]
+            "required": ["path", "old_text", "new_text"],
         }
 
     async def execute(self, params: dict[str, Any]) -> ToolResult:
@@ -148,26 +125,21 @@ class EditFileTool(AgentTool):
                 return ToolResult(success=False, content="", error=f"File not found: {file_path}")
 
             # Read file
-            content = path.read_text(encoding='utf-8')
+            content = path.read_text(encoding="utf-8")
 
             # Check if old_text exists
             if old_text not in content:
                 return ToolResult(
-                    success=False,
-                    content="",
-                    error=f"Text not found in file: {old_text[:50]}..."
+                    success=False, content="", error=f"Text not found in file: {old_text[:50]}..."
                 )
 
             # Replace
             new_content = content.replace(old_text, new_text, 1)
 
             # Write back
-            path.write_text(new_content, encoding='utf-8')
+            path.write_text(new_content, encoding="utf-8")
 
-            return ToolResult(
-                success=True,
-                content=f"Replaced 1 occurrence in {file_path}"
-            )
+            return ToolResult(success=True, content=f"Replaced 1 occurrence in {file_path}")
 
         except Exception as e:
             logger.error(f"Edit file error: {e}", exc_info=True)

@@ -1,9 +1,9 @@
 """Process management tool"""
 
-import logging
 import asyncio
-import signal
-from typing import Any, Optional
+import logging
+from typing import Any
+
 import psutil
 
 from .base import AgentTool, ToolResult
@@ -27,31 +27,22 @@ class ProcessTool(AgentTool):
                 "action": {
                     "type": "string",
                     "enum": ["start", "stop", "status", "list", "kill", "wait"],
-                    "description": "Process action"
+                    "description": "Process action",
                 },
-                "command": {
-                    "type": "string",
-                    "description": "Command to execute (for start)"
-                },
-                "process_id": {
-                    "type": "string",
-                    "description": "Process identifier"
-                },
-                "pid": {
-                    "type": "integer",
-                    "description": "System process ID (for kill/status)"
-                },
+                "command": {"type": "string", "description": "Command to execute (for start)"},
+                "process_id": {"type": "string", "description": "Process identifier"},
+                "pid": {"type": "integer", "description": "System process ID (for kill/status)"},
                 "background": {
                     "type": "boolean",
                     "description": "Run in background",
-                    "default": True
+                    "default": True,
                 },
                 "working_directory": {
                     "type": "string",
-                    "description": "Working directory for the command"
-                }
+                    "description": "Working directory for the command",
+                },
             },
-            "required": ["action"]
+            "required": ["action"],
         }
 
     async def execute(self, params: dict[str, Any]) -> ToolResult:
@@ -75,11 +66,7 @@ class ProcessTool(AgentTool):
             elif action == "wait":
                 return await self._wait_process(params)
             else:
-                return ToolResult(
-                    success=False,
-                    content="",
-                    error=f"Unknown action: {action}"
-                )
+                return ToolResult(success=False, content="", error=f"Unknown action: {action}")
 
         except Exception as e:
             logger.error(f"Process tool error: {e}", exc_info=True)
@@ -97,10 +84,7 @@ class ProcessTool(AgentTool):
 
         # Create subprocess
         process = await asyncio.create_subprocess_shell(
-            command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            cwd=working_dir
+            command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, cwd=working_dir
         )
 
         # Track process
@@ -109,14 +93,14 @@ class ProcessTool(AgentTool):
         if not background:
             # Wait for completion
             stdout, stderr = await process.communicate()
-            
+
             output = ""
             if stdout:
-                output += stdout.decode('utf-8', errors='replace')
+                output += stdout.decode("utf-8", errors="replace")
             if stderr:
                 if output:
                     output += "\n"
-                output += stderr.decode('utf-8', errors='replace')
+                output += stderr.decode("utf-8", errors="replace")
 
             # Remove from tracking
             del self._tracked_processes[process_id]
@@ -127,19 +111,15 @@ class ProcessTool(AgentTool):
                 metadata={
                     "process_id": process_id,
                     "exit_code": process.returncode,
-                    "pid": process.pid
-                }
+                    "pid": process.pid,
+                },
             )
         else:
             # Return immediately
             return ToolResult(
                 success=True,
                 content=f"Started process '{process_id}' (PID: {process.pid})",
-                metadata={
-                    "process_id": process_id,
-                    "pid": process.pid,
-                    "background": True
-                }
+                metadata={"process_id": process_id, "pid": process.pid, "background": True},
             )
 
     async def _stop_process(self, params: dict[str, Any]) -> ToolResult:
@@ -150,27 +130,20 @@ class ProcessTool(AgentTool):
             return ToolResult(success=False, content="", error="process_id required")
 
         if process_id not in self._tracked_processes:
-            return ToolResult(
-                success=False,
-                content="",
-                error=f"Process '{process_id}' not found"
-            )
+            return ToolResult(success=False, content="", error=f"Process '{process_id}' not found")
 
         process = self._tracked_processes[process_id]
-        
+
         try:
             process.terminate()
             await asyncio.wait_for(process.wait(), timeout=5.0)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             process.kill()
             await process.wait()
 
         del self._tracked_processes[process_id]
 
-        return ToolResult(
-            success=True,
-            content=f"Stopped process '{process_id}'"
-        )
+        return ToolResult(success=True, content=f"Stopped process '{process_id}'")
 
     async def _process_status(self, params: dict[str, Any]) -> ToolResult:
         """Get process status"""
@@ -180,9 +153,7 @@ class ProcessTool(AgentTool):
         if process_id:
             if process_id not in self._tracked_processes:
                 return ToolResult(
-                    success=False,
-                    content="",
-                    error=f"Process '{process_id}' not found"
+                    success=False, content="", error=f"Process '{process_id}' not found"
                 )
 
             process = self._tracked_processes[process_id]
@@ -200,8 +171,8 @@ class ProcessTool(AgentTool):
                     "process_id": process_id,
                     "pid": process.pid,
                     "status": status,
-                    "return_code": return_code
-                }
+                    "return_code": return_code,
+                },
             )
 
         elif pid:
@@ -213,7 +184,7 @@ class ProcessTool(AgentTool):
                     "status": proc.status(),
                     "cpu_percent": proc.cpu_percent(),
                     "memory_percent": proc.memory_percent(),
-                    "create_time": proc.create_time()
+                    "create_time": proc.create_time(),
                 }
 
                 output = f"Process {pid} ({info['name']}):\n"
@@ -221,39 +192,23 @@ class ProcessTool(AgentTool):
                 output += f"  CPU: {info['cpu_percent']}%\n"
                 output += f"  Memory: {info['memory_percent']:.1f}%\n"
 
-                return ToolResult(
-                    success=True,
-                    content=output,
-                    metadata=info
-                )
+                return ToolResult(success=True, content=output, metadata=info)
 
             except psutil.NoSuchProcess:
-                return ToolResult(
-                    success=False,
-                    content="",
-                    error=f"Process {pid} not found"
-                )
+                return ToolResult(success=False, content="", error=f"Process {pid} not found")
             except ImportError:
                 return ToolResult(
                     success=False,
                     content="",
-                    error="psutil not installed. Install with: pip install psutil"
+                    error="psutil not installed. Install with: pip install psutil",
                 )
         else:
-            return ToolResult(
-                success=False,
-                content="",
-                error="process_id or pid required"
-            )
+            return ToolResult(success=False, content="", error="process_id or pid required")
 
     async def _list_processes(self, params: dict[str, Any]) -> ToolResult:
         """List tracked processes"""
         if not self._tracked_processes:
-            return ToolResult(
-                success=True,
-                content="No tracked processes",
-                metadata={"count": 0}
-            )
+            return ToolResult(success=True, content="No tracked processes", metadata={"count": 0})
 
         output = f"Tracked processes ({len(self._tracked_processes)}):\n\n"
         for proc_id, process in self._tracked_processes.items():
@@ -269,8 +224,8 @@ class ProcessTool(AgentTool):
                 "processes": [
                     {"process_id": pid, "pid": p.pid, "return_code": p.returncode}
                     for pid, p in self._tracked_processes.items()
-                ]
-            }
+                ],
+            },
         )
 
     async def _kill_process(self, params: dict[str, Any]) -> ToolResult:
@@ -281,9 +236,7 @@ class ProcessTool(AgentTool):
         if process_id:
             if process_id not in self._tracked_processes:
                 return ToolResult(
-                    success=False,
-                    content="",
-                    error=f"Process '{process_id}' not found"
+                    success=False, content="", error=f"Process '{process_id}' not found"
                 )
 
             process = self._tracked_processes[process_id]
@@ -291,37 +244,19 @@ class ProcessTool(AgentTool):
             await process.wait()
             del self._tracked_processes[process_id]
 
-            return ToolResult(
-                success=True,
-                content=f"Killed process '{process_id}'"
-            )
+            return ToolResult(success=True, content=f"Killed process '{process_id}'")
 
         elif pid:
             try:
                 proc = psutil.Process(pid)
                 proc.kill()
-                return ToolResult(
-                    success=True,
-                    content=f"Killed process {pid}"
-                )
+                return ToolResult(success=True, content=f"Killed process {pid}")
             except psutil.NoSuchProcess:
-                return ToolResult(
-                    success=False,
-                    content="",
-                    error=f"Process {pid} not found"
-                )
+                return ToolResult(success=False, content="", error=f"Process {pid} not found")
             except ImportError:
-                return ToolResult(
-                    success=False,
-                    content="",
-                    error="psutil not installed"
-                )
+                return ToolResult(success=False, content="", error="psutil not installed")
         else:
-            return ToolResult(
-                success=False,
-                content="",
-                error="process_id or pid required"
-            )
+            return ToolResult(success=False, content="", error="process_id or pid required")
 
     async def _wait_process(self, params: dict[str, Any]) -> ToolResult:
         """Wait for process to complete"""
@@ -331,24 +266,20 @@ class ProcessTool(AgentTool):
             return ToolResult(success=False, content="", error="process_id required")
 
         if process_id not in self._tracked_processes:
-            return ToolResult(
-                success=False,
-                content="",
-                error=f"Process '{process_id}' not found"
-            )
+            return ToolResult(success=False, content="", error=f"Process '{process_id}' not found")
 
         process = self._tracked_processes[process_id]
-        
+
         # Wait for completion
         stdout, stderr = await process.communicate()
-        
+
         output = ""
         if stdout:
-            output += stdout.decode('utf-8', errors='replace')
+            output += stdout.decode("utf-8", errors="replace")
         if stderr:
             if output:
                 output += "\n"
-            output += stderr.decode('utf-8', errors='replace')
+            output += stderr.decode("utf-8", errors="replace")
 
         # Remove from tracking
         del self._tracked_processes[process_id]
@@ -356,8 +287,5 @@ class ProcessTool(AgentTool):
         return ToolResult(
             success=process.returncode == 0,
             content=output,
-            metadata={
-                "process_id": process_id,
-                "exit_code": process.returncode
-            }
+            metadata={"process_id": process_id, "exit_code": process.returncode},
         )

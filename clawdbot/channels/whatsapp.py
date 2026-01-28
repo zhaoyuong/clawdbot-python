@@ -1,10 +1,10 @@
 """WhatsApp channel implementation"""
 
 import logging
-from typing import Any, Optional
 from datetime import datetime
+from typing import Any
 
-from .base import ChannelPlugin, ChannelCapabilities, InboundMessage
+from .base import ChannelCapabilities, ChannelPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +21,9 @@ class WhatsAppChannel(ChannelPlugin):
             supports_media=True,
             supports_reactions=True,
             supports_threads=False,
-            supports_polls=False
+            supports_polls=False,
         )
-        self._client: Optional[Any] = None
+        self._client: Any | None = None
 
     async def start(self, config: dict[str, Any]) -> None:
         """Start WhatsApp client"""
@@ -34,14 +34,14 @@ class WhatsAppChannel(ChannelPlugin):
             # 1. yowsup (legacy, Python 2/3)
             # 2. whatsapp-web.py (web-based)
             # 3. WhatsApp Business API (official, requires business account)
-            
+
             logger.warning("WhatsApp channel requires library integration")
             logger.warning("Options: yowsup, whatsapp-web.py, or WhatsApp Business API")
             logger.info(f"WhatsApp configured for {phone_number}")
-            
+
             self._running = True
             logger.info("WhatsApp channel started (framework ready - library integration needed)")
-            
+
         except Exception as e:
             logger.error(f"Failed to start WhatsApp channel: {e}", exc_info=True)
             # Still allow framework mode
@@ -56,7 +56,7 @@ class WhatsAppChannel(ChannelPlugin):
             pass
         self._running = False
 
-    async def send_text(self, target: str, text: str, reply_to: Optional[str] = None) -> str:
+    async def send_text(self, target: str, text: str, reply_to: str | None = None) -> str:
         """Send text message"""
         if not self._running:
             raise RuntimeError("WhatsApp channel not started")
@@ -66,11 +66,7 @@ class WhatsAppChannel(ChannelPlugin):
         return f"whatsapp-msg-{datetime.utcnow().timestamp()}"
 
     async def send_media(
-        self,
-        target: str,
-        media_url: str,
-        media_type: str,
-        caption: Optional[str] = None
+        self, target: str, media_url: str, media_type: str, caption: str | None = None
     ) -> str:
         """Send media message"""
         if not self._running:

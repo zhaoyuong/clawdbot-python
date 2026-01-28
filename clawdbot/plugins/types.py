@@ -1,6 +1,8 @@
 """Plugin types and interfaces"""
 
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -10,8 +12,8 @@ class PluginManifest(BaseModel):
     id: str
     name: str
     version: str
-    description: Optional[str] = None
-    author: Optional[str] = None
+    description: str | None = None
+    author: str | None = None
     main: str = "plugin.py"  # Main plugin file
     skills: list[str] = []  # Skill directories
     requires: list[str] = []  # Required dependencies
@@ -50,7 +52,7 @@ class Plugin:
     def __init__(self, manifest: PluginManifest, path: str):
         self.manifest = manifest
         self.path = path
-        self.api: Optional[PluginAPI] = None
+        self.api: PluginAPI | None = None
 
     async def activate(self, api: PluginAPI) -> None:
         """Activate the plugin"""

@@ -1,10 +1,10 @@
 """Tlon/Urbit channel implementation"""
 
 import logging
-from typing import Any, Optional
 from datetime import datetime
+from typing import Any
 
-from .base import ChannelPlugin, ChannelCapabilities, InboundMessage
+from .base import ChannelCapabilities, ChannelPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class TlonChannel(ChannelPlugin):
             supports_media=False,
             supports_reactions=False,
             supports_threads=False,
-            supports_polls=False
+            supports_polls=False,
         )
         self._ship_url = None
         self._ship_code = None
@@ -37,7 +37,7 @@ class TlonChannel(ChannelPlugin):
         logger.info("Starting Tlon channel...")
         logger.warning("Tlon channel requires Urbit/Tlon API integration")
         logger.info(f"Ship URL: {self._ship_url}")
-        
+
         self._running = True
         logger.info("Tlon channel started (framework ready)")
 
@@ -46,7 +46,7 @@ class TlonChannel(ChannelPlugin):
         logger.info("Stopping Tlon channel...")
         self._running = False
 
-    async def send_text(self, target: str, text: str, reply_to: Optional[str] = None) -> str:
+    async def send_text(self, target: str, text: str, reply_to: str | None = None) -> str:
         """Send message to Urbit"""
         if not self._running:
             raise RuntimeError("Tlon channel not started")
@@ -55,11 +55,7 @@ class TlonChannel(ChannelPlugin):
         return f"tlon-msg-{datetime.utcnow().timestamp()}"
 
     async def send_media(
-        self,
-        target: str,
-        media_url: str,
-        media_type: str,
-        caption: Optional[str] = None
+        self, target: str, media_url: str, media_type: str, caption: str | None = None
     ) -> str:
         """Send media (not typically supported in Urbit)"""
         if not self._running:

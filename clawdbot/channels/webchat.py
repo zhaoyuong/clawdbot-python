@@ -1,10 +1,10 @@
 """WebChat channel (Gateway WebSocket)"""
 
 import logging
-from typing import Any, Optional
 from datetime import datetime
+from typing import Any
 
-from .base import ChannelPlugin, ChannelCapabilities, InboundMessage
+from .base import ChannelCapabilities, ChannelPlugin, InboundMessage
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +21,9 @@ class WebChatChannel(ChannelPlugin):
             supports_media=False,
             supports_reactions=False,
             supports_threads=False,
-            supports_polls=False
+            supports_polls=False,
         )
-        self._gateway_server: Optional[Any] = None
+        self._gateway_server: Any | None = None
 
     async def start(self, config: dict[str, Any]) -> None:
         """Start WebChat (actually handled by Gateway)"""
@@ -35,18 +35,21 @@ class WebChatChannel(ChannelPlugin):
         logger.info("WebChat channel stopped")
         self._running = False
 
-    async def send_text(self, target: str, text: str, reply_to: Optional[str] = None) -> str:
+    async def send_text(self, target: str, text: str, reply_to: str | None = None) -> str:
         """Send text message (via Gateway broadcast)"""
         # WebChat messages are broadcast via Gateway events
         # This is handled by the Gateway server
         if self._gateway_server:
-            await self._gateway_server.broadcast_event("chat", {
-                "channel": self.id,
-                "target": target,
-                "text": text,
-                "messageId": f"webchat-{datetime.utcnow().timestamp()}"
-            })
-        
+            await self._gateway_server.broadcast_event(
+                "chat",
+                {
+                    "channel": self.id,
+                    "target": target,
+                    "text": text,
+                    "messageId": f"webchat-{datetime.utcnow().timestamp()}",
+                },
+            )
+
         return f"webchat-{datetime.utcnow().timestamp()}"
 
     def set_gateway_server(self, server: Any) -> None:
@@ -54,10 +57,7 @@ class WebChatChannel(ChannelPlugin):
         self._gateway_server = server
 
     async def handle_webchat_message(
-        self,
-        session_key: str,
-        text: str,
-        sender_id: str = "webchat-user"
+        self, session_key: str, text: str, sender_id: str = "webchat-user"
     ) -> None:
         """Handle WebChat message from Gateway"""
         inbound = InboundMessage(
@@ -69,7 +69,7 @@ class WebChatChannel(ChannelPlugin):
             chat_type="direct",
             text=text,
             timestamp=datetime.utcnow().isoformat(),
-            metadata={"session_key": session_key}
+            metadata={"session_key": session_key},
         )
 
         await self._handle_message(inbound)

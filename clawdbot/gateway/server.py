@@ -3,15 +3,15 @@
 import asyncio
 import json
 import logging
-from typing import Any, Optional
-from datetime import datetime
+from typing import Any
+
 import websockets
 from websockets.server import WebSocketServerProtocol
 
 from ..config import ClawdbotConfig
-from .protocol import RequestFrame, ResponseFrame, EventFrame, ErrorShape
-from .protocol.frames import ConnectRequest, HelloResponse
 from .handlers import get_method_handler
+from .protocol import ErrorShape, EventFrame, RequestFrame, ResponseFrame
+from .protocol.frames import ConnectRequest, HelloResponse
 
 logger = logging.getLogger(__name__)
 
@@ -23,25 +23,19 @@ class GatewayConnection:
         self.websocket = websocket
         self.config = config
         self.authenticated = False
-        self.client_info: Optional[dict[str, Any]] = None
+        self.client_info: dict[str, Any] | None = None
         self.protocol_version = 1
 
-    async def send_response(self, request_id: str, payload: Any = None, error: Optional[ErrorShape] = None) -> None:
+    async def send_response(
+        self, request_id: str, payload: Any = None, error: ErrorShape | None = None
+    ) -> None:
         """Send response frame"""
-        response = ResponseFrame(
-            id=request_id,
-            ok=error is None,
-            payload=payload,
-            error=error
-        )
+        response = ResponseFrame(id=request_id, ok=error is None, payload=payload, error=error)
         await self.websocket.send(response.model_dump_json())
 
     async def send_event(self, event: str, payload: Any = None) -> None:
         """Send event frame"""
-        event_frame = EventFrame(
-            event=event,
-            payload=payload
-        )
+        event_frame = EventFrame(event=event, payload=payload)
         await self.websocket.send(event_frame.model_dump_json())
 
     async def handle_message(self, message: str) -> None:
@@ -75,8 +69,8 @@ class GatewayConnection:
                     request.id,
                     error=ErrorShape(
                         code="AUTH_REQUIRED",
-                        message="Authentication required. Send 'connect' request first."
-                    )
+                        message="Authentication required. Send 'connect' request first.",
+                    ),
                 )
                 return
 
@@ -86,9 +80,8 @@ class GatewayConnection:
                 await self.send_response(
                     request.id,
                     error=ErrorShape(
-                        code="METHOD_NOT_FOUND",
-                        message=f"Method '{request.method}' not found"
-                    )
+                        code="METHOD_NOT_FOUND", message=f"Method '{request.method}' not found"
+                    ),
                 )
                 return
 
@@ -99,11 +92,7 @@ class GatewayConnection:
         except Exception as e:
             logger.error(f"Error handling request {request.method}: {e}", exc_info=True)
             await self.send_response(
-                request.id,
-                error=ErrorShape(
-                    code="INTERNAL_ERROR",
-                    message=str(e)
-                )
+                request.id, error=ErrorShape(code="INTERNAL_ERROR", message=str(e))
             )
 
     async def handle_connect(self, request: RequestFrame) -> None:
@@ -121,23 +110,15 @@ class GatewayConnection:
             # Send hello response
             hello = HelloResponse(
                 protocol=negotiated_protocol,
-                server={
-                    "name": "clawdbot-python",
-                    "version": "0.1.0",
-                    "platform": "python"
-                },
+                server={"name": "clawdbot-python", "version": "0.1.0", "platform": "python"},
                 features={
                     "agent": True,
                     "chat": True,
                     "sessions": True,
                     "channels": True,
-                    "tools": True
+                    "tools": True,
                 },
-                snapshot={
-                    "sessions": [],
-                    "channels": [],
-                    "agents": []
-                }
+                snapshot={"sessions": [], "channels": [], "agents": []},
             )
 
             await self.send_response(request.id, payload=hello.model_dump())
@@ -146,11 +127,7 @@ class GatewayConnection:
         except Exception as e:
             logger.error(f"Connect handshake failed: {e}", exc_info=True)
             await self.send_response(
-                request.id,
-                error=ErrorShape(
-                    code="HANDSHAKE_FAILED",
-                    message=str(e)
-                )
+                request.id, error=ErrorShape(code="HANDSHAKE_FAILED", message=str(e))
             )
 
 
