@@ -1,4 +1,4 @@
-# ClawdBot Python ---- NEW ONE openclaw-python is ready.
+# ClawdBot Python ---- NEW ONE openclaw-python is ready https://github.com/zhaoyuong/openclaw-python.
 
 > **⚠️ WORK IN PROGRESS**: This project is under active development and approaching production readiness.
 
